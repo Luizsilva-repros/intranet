@@ -15,7 +15,6 @@ import {
   Phone,
   Mail,
   Smartphone,
-  User,
   Calendar,
   Settings,
   LogOut,
@@ -461,7 +460,9 @@ export default function DashboardPage() {
             {Object.keys(extensionsByDepartment).length === 0 ? (
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-12">
-                  <Phone className="h-12 w-12 text-gray-400 mb-4" />
+                  <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center mb-4">
+                    <Phone className="h-8 w-8 text-blue-600" />
+                  </div>
                   <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum ramal encontrado</h3>
                   <p className="text-gray-600 text-center">
                     {searchTerm ? "Tente ajustar os termos da busca." : "Não há ramais cadastrados no momento."}
@@ -470,64 +471,152 @@ export default function DashboardPage() {
               </Card>
             ) : (
               <div className="grid gap-6">
-                {Object.entries(extensionsByDepartment).map(([department, deptExtensions]) => (
-                  <Card key={department}>
-                    <CardHeader>
-                      <CardTitle className="flex items-center space-x-2">
-                        <Users className="h-5 w-5" />
-                        <span>{department}</span>
-                        <Badge variant="secondary">{deptExtensions.length}</Badge>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                        {deptExtensions.map((ext) => (
-                          <div
-                            key={ext.id}
-                            className="p-4 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-colors"
-                          >
-                            <div className="flex items-start space-x-3">
-                              <Avatar className="h-10 w-10">
-                                <AvatarFallback>
-                                  <User className="h-5 w-5" />
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="flex-1 min-w-0">
-                                <h4 className="font-medium text-gray-900 truncate">{ext.name}</h4>
-                                {ext.position && <p className="text-sm text-gray-600 truncate">{ext.position}</p>}
-                                <div className="mt-2 space-y-1">
-                                  <div className="flex items-center space-x-2 text-sm">
-                                    <Phone className="h-3 w-3 text-gray-400" />
-                                    <span className="font-mono">{ext.extension}</span>
+                {Object.entries(extensionsByDepartment).map(([department, deptExtensions]) => {
+                  // Cores para diferentes departamentos
+                  const departmentColors = {
+                    Administração: {
+                      bg: "from-purple-100 to-purple-200",
+                      icon: "text-purple-600",
+                      border: "border-purple-200",
+                    },
+                    "Recursos Humanos": {
+                      bg: "from-green-100 to-green-200",
+                      icon: "text-green-600",
+                      border: "border-green-200",
+                    },
+                    TI: { bg: "from-blue-100 to-blue-200", icon: "text-blue-600", border: "border-blue-200" },
+                    Financeiro: {
+                      bg: "from-yellow-100 to-yellow-200",
+                      icon: "text-yellow-600",
+                      border: "border-yellow-200",
+                    },
+                    Vendas: { bg: "from-red-100 to-red-200", icon: "text-red-600", border: "border-red-200" },
+                    Marketing: { bg: "from-pink-100 to-pink-200", icon: "text-pink-600", border: "border-pink-200" },
+                    Suporte: {
+                      bg: "from-indigo-100 to-indigo-200",
+                      icon: "text-indigo-600",
+                      border: "border-indigo-200",
+                    },
+                    Jurídico: { bg: "from-gray-100 to-gray-200", icon: "text-gray-600", border: "border-gray-200" },
+                    Faturamento: {
+                      bg: "from-orange-100 to-orange-200",
+                      icon: "text-orange-600",
+                      border: "border-orange-200",
+                    },
+                  }
+
+                  const colors = departmentColors[department as keyof typeof departmentColors] || departmentColors["TI"]
+
+                  return (
+                    <Card
+                      key={department}
+                      className={`border-2 ${colors.border} shadow-lg hover:shadow-xl transition-all duration-300`}
+                    >
+                      <CardHeader className={`bg-gradient-to-r ${colors.bg} rounded-t-lg`}>
+                        <CardTitle className="flex items-center space-x-3">
+                          <div className={`w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-md`}>
+                            <Users className={`h-5 w-5 ${colors.icon}`} />
+                          </div>
+                          <div>
+                            <span className={`text-lg font-bold ${colors.icon}`}>{department}</span>
+                            <Badge variant="secondary" className="ml-3 bg-white/80 text-gray-700">
+                              {deptExtensions.length} {deptExtensions.length === 1 ? "pessoa" : "pessoas"}
+                            </Badge>
+                          </div>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-6">
+                        <div className="grid gap-6 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
+                          {deptExtensions.map((ext) => (
+                            <div
+                              key={ext.id}
+                              className="group p-5 rounded-xl border-2 border-gray-100 hover:border-blue-200 hover:bg-blue-50/50 transition-all duration-300 hover:shadow-lg"
+                            >
+                              <div className="flex items-start space-x-4">
+                                {/* Avatar com iniciais */}
+                                <div className="relative">
+                                  <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                                    <span className="text-white font-bold text-lg">
+                                      {ext.name
+                                        .split(" ")
+                                        .map((n) => n[0])
+                                        .join("")
+                                        .substring(0, 2)
+                                        .toUpperCase()}
+                                    </span>
                                   </div>
-                                  {ext.email && (
-                                    <div className="flex items-center space-x-2 text-sm">
-                                      <Mail className="h-3 w-3 text-gray-400" />
-                                      <a
-                                        href={`mailto:${ext.email}`}
-                                        className="text-blue-600 hover:text-blue-800 truncate"
-                                      >
-                                        {ext.email}
-                                      </a>
-                                    </div>
+                                  <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+                                    <div className="w-2 h-2 bg-white rounded-full"></div>
+                                  </div>
+                                </div>
+
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-bold text-gray-900 truncate text-lg group-hover:text-blue-600 transition-colors">
+                                    {ext.name}
+                                  </h4>
+                                  {ext.position && (
+                                    <p className="text-sm text-gray-600 truncate font-medium mb-3">{ext.position}</p>
                                   )}
-                                  {ext.mobile && (
-                                    <div className="flex items-center space-x-2 text-sm">
-                                      <Smartphone className="h-3 w-3 text-gray-400" />
-                                      <a href={`tel:${ext.mobile}`} className="text-blue-600 hover:text-blue-800">
-                                        {ext.mobile}
-                                      </a>
+
+                                  <div className="space-y-2">
+                                    {/* Ramal */}
+                                    <div className="flex items-center space-x-3 group/item hover:bg-blue-50 p-2 rounded-lg transition-colors">
+                                      <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-green-500 rounded-lg flex items-center justify-center shadow-sm">
+                                        <Phone className="h-4 w-4 text-white" />
+                                      </div>
+                                      <div className="flex-1">
+                                        <span className="font-mono text-sm font-bold text-gray-900">
+                                          {ext.extension}
+                                        </span>
+                                        <p className="text-xs text-gray-500">Ramal interno</p>
+                                      </div>
                                     </div>
-                                  )}
+
+                                    {/* Email */}
+                                    {ext.email && (
+                                      <div className="flex items-center space-x-3 group/item hover:bg-blue-50 p-2 rounded-lg transition-colors">
+                                        <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-500 rounded-lg flex items-center justify-center shadow-sm">
+                                          <Mail className="h-4 w-4 text-white" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <a
+                                            href={`mailto:${ext.email}`}
+                                            className="text-sm text-blue-600 hover:text-blue-800 truncate block font-medium hover:underline"
+                                          >
+                                            {ext.email}
+                                          </a>
+                                          <p className="text-xs text-gray-500">Email corporativo</p>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Celular */}
+                                    {ext.mobile && (
+                                      <div className="flex items-center space-x-3 group/item hover:bg-blue-50 p-2 rounded-lg transition-colors">
+                                        <div className="w-8 h-8 bg-gradient-to-br from-purple-400 to-purple-500 rounded-lg flex items-center justify-center shadow-sm">
+                                          <Smartphone className="h-4 w-4 text-white" />
+                                        </div>
+                                        <div className="flex-1">
+                                          <a
+                                            href={`tel:${ext.mobile}`}
+                                            className="text-sm text-purple-600 hover:text-purple-800 font-medium hover:underline"
+                                          >
+                                            {ext.mobile}
+                                          </a>
+                                          <p className="text-xs text-gray-500">Celular</p>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
               </div>
             )}
           </TabsContent>
