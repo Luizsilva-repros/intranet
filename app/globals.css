@@ -1,0 +1,770 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222.2 84% 4.9%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222.2 84% 4.9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.5rem;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 84% 4.9%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 94.1%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Estilos personalizados para a intranet */
+.post-card {
+  @apply transition-shadow hover:shadow-lg;
+}
+
+.post-image-feed {
+  @apply w-full h-48 object-cover rounded-lg;
+}
+
+.post-image-feed-centered {
+  @apply max-w-sm max-h-80 w-auto h-auto object-contain mx-auto block rounded-lg shadow-sm;
+  max-width: 400px;
+  max-height: 300px;
+  object-fit: cover;
+}
+
+/* Responsividade para imagens do feed */
+@media (max-width: 640px) {
+  .post-image-feed-centered {
+    @apply max-w-xs max-h-64;
+  }
+}
+
+@media (max-width: 480px) {
+  .post-image-feed-centered {
+    @apply max-w-64 max-h-48;
+  }
+}
+
+/* Cores personalizáveis */
+:root {
+  --primary-color: #3b82f6;
+  --secondary-color: #10b981;
+  --accent-color: #8b5cf6;
+}
+
+/* Aplicar cores personalizadas */
+.bg-primary-custom {
+  background-color: var(--primary-color);
+}
+
+.text-primary-custom {
+  color: var(--primary-color);
+}
+
+.border-primary-custom {
+  border-color: var(--primary-color);
+}
+
+.bg-secondary-custom {
+  background-color: var(--secondary-color);
+}
+
+.text-secondary-custom {
+  color: var(--secondary-color);
+}
+
+.bg-accent-custom {
+  background-color: var(--accent-color);
+}
+
+.text-accent-custom {
+  color: var(--accent-color);
+}
+
+/* Estilos para cards de portal */
+.portal-card {
+  @apply transition-all duration-200 hover:shadow-md hover:scale-105;
+}
+
+/* Estilos para ramais */
+.extension-card {
+  @apply transition-colors hover:bg-gray-50;
+}
+
+/* Estilos para o header */
+.header-logo {
+  @apply h-12 w-12 object-contain;
+}
+
+/* Animações */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Estilos para badges */
+.priority-badge-high {
+  @apply bg-red-100 text-red-800 border-red-200;
+}
+
+.priority-badge-medium {
+  @apply bg-yellow-100 text-yellow-800 border-yellow-200;
+}
+
+.priority-badge-low {
+  @apply bg-green-100 text-green-800 border-green-200;
+}
+
+/* Estilos para formulários */
+.form-section {
+  @apply p-4 bg-gray-50 rounded-lg border;
+}
+
+/* Estilos para tabelas */
+.data-table {
+  @apply w-full border-collapse;
+}
+
+.data-table th {
+  @apply px-4 py-2 text-left font-medium text-gray-700 border-b;
+}
+
+.data-table td {
+  @apply px-4 py-2 border-b border-gray-200;
+}
+
+/* Estilos para loading */
+.loading-spinner {
+  @apply animate-spin rounded-full border-2 border-gray-300 border-t-blue-600;
+}
+
+/* Estilos para mensagens de sucesso/erro */
+.message-success {
+  @apply bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg;
+}
+
+.message-error {
+  @apply bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg;
+}
+
+.message-warning {
+  @apply bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg;
+}
+
+.message-info {
+  @apply bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-lg;
+}
+
+/* Estilos para botões personalizados */
+.btn-primary-custom {
+  background-color: var(--primary-color);
+  @apply text-white hover:opacity-90 transition-opacity;
+}
+
+.btn-secondary-custom {
+  background-color: var(--secondary-color);
+  @apply text-white hover:opacity-90 transition-opacity;
+}
+
+.btn-accent-custom {
+  background-color: var(--accent-color);
+  @apply text-white hover:opacity-90 transition-opacity;
+}
+
+/* Estilos para sidebar (se necessário no futuro) */
+.sidebar {
+  @apply fixed left-0 top-0 h-full w-64 bg-white shadow-lg transform transition-transform duration-300;
+}
+
+.sidebar.closed {
+  @apply -translate-x-full;
+}
+
+/* Estilos para modal/dialog */
+.modal-overlay {
+  @apply fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50;
+}
+
+.modal-content {
+  @apply bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6;
+}
+
+/* Estilos para tooltips */
+.tooltip {
+  @apply absolute z-10 px-2 py-1 text-sm text-white bg-gray-900 rounded shadow-lg;
+}
+
+/* Estilos para breadcrumbs */
+.breadcrumb {
+  @apply flex items-center space-x-2 text-sm text-gray-600;
+}
+
+.breadcrumb-item {
+  @apply hover:text-gray-900 transition-colors;
+}
+
+.breadcrumb-separator {
+  @apply text-gray-400;
+}
+
+/* Estilos para paginação */
+.pagination {
+  @apply flex items-center justify-center space-x-2;
+}
+
+.pagination-item {
+  @apply px-3 py-2 text-sm border rounded hover:bg-gray-50 transition-colors;
+}
+
+.pagination-item.active {
+  background-color: var(--primary-color);
+  @apply text-white border-transparent;
+}
+
+/* Estilos para filtros */
+.filter-section {
+  @apply bg-white p-4 rounded-lg shadow-sm border;
+}
+
+/* Estilos para estatísticas */
+.stat-card {
+  @apply bg-white p-6 rounded-lg shadow-sm border;
+}
+
+.stat-number {
+  @apply text-3xl font-bold;
+}
+
+.stat-label {
+  @apply text-sm text-gray-600 mt-1;
+}
+
+/* Estilos para timeline */
+.timeline {
+  @apply relative;
+}
+
+.timeline-item {
+  @apply relative pl-8 pb-8;
+}
+
+.timeline-item::before {
+  @apply absolute left-0 top-0 w-2 h-2 bg-blue-500 rounded-full;
+  content: "";
+}
+
+.timeline-item::after {
+  @apply absolute left-0.5 top-2 w-0.5 h-full bg-gray-200;
+  content: "";
+}
+
+.timeline-item:last-child::after {
+  @apply hidden;
+}
+
+/* Estilos para tags */
+.tag {
+  @apply inline-flex items-center px-2 py-1 text-xs font-medium rounded-full;
+}
+
+.tag-blue {
+  @apply bg-blue-100 text-blue-800;
+}
+
+.tag-green {
+  @apply bg-green-100 text-green-800;
+}
+
+.tag-yellow {
+  @apply bg-yellow-100 text-yellow-800;
+}
+
+.tag-red {
+  @apply bg-red-100 text-red-800;
+}
+
+.tag-gray {
+  @apply bg-gray-100 text-gray-800;
+}
+
+/* Estilos para progress bars */
+.progress-bar {
+  @apply w-full bg-gray-200 rounded-full h-2;
+}
+
+.progress-fill {
+  @apply h-2 rounded-full transition-all duration-300;
+}
+
+/* Estilos para avatars */
+.avatar-group {
+  @apply flex -space-x-2;
+}
+
+.avatar-group .avatar {
+  @apply border-2 border-white;
+}
+
+/* Estilos para empty states */
+.empty-state {
+  @apply text-center py-12;
+}
+
+.empty-state-icon {
+  @apply mx-auto h-12 w-12 text-gray-400 mb-4;
+}
+
+.empty-state-title {
+  @apply text-lg font-medium text-gray-900 mb-2;
+}
+
+.empty-state-description {
+  @apply text-gray-600;
+}
+
+/* Estilos para search */
+.search-container {
+  @apply relative;
+}
+
+.search-icon {
+  @apply absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400;
+}
+
+.search-input {
+  @apply pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+}
+
+/* Estilos para dropdowns */
+.dropdown-menu {
+  @apply absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border z-10;
+}
+
+.dropdown-item {
+  @apply block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors;
+}
+
+/* Estilos para notificações */
+.notification {
+  @apply fixed top-4 right-4 max-w-sm bg-white rounded-lg shadow-lg border p-4 z-50;
+}
+
+.notification-success {
+  @apply border-l-4 border-green-500;
+}
+
+.notification-error {
+  @apply border-l-4 border-red-500;
+}
+
+.notification-warning {
+  @apply border-l-4 border-yellow-500;
+}
+
+.notification-info {
+  @apply border-l-4 border-blue-500;
+}
+
+/* Estilos para código */
+.code-block {
+  @apply bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto;
+}
+
+.inline-code {
+  @apply bg-gray-100 text-gray-900 px-1 py-0.5 rounded text-sm;
+}
+
+/* Estilos para tabelas responsivas */
+.table-responsive {
+  @apply overflow-x-auto;
+}
+
+.table-responsive table {
+  @apply min-w-full;
+}
+
+/* Estilos para mobile */
+@media (max-width: 768px) {
+  .mobile-hidden {
+    @apply hidden;
+  }
+
+  .mobile-full {
+    @apply w-full;
+  }
+
+  .mobile-stack {
+    @apply flex-col space-y-2 space-x-0;
+  }
+}
+
+/* Estilos para impressão */
+@media print {
+  .print-hidden {
+    @apply hidden;
+  }
+
+  .print-break {
+    page-break-after: always;
+  }
+}
+
+/* Estilos para acessibilidade */
+.sr-only {
+  @apply absolute w-px h-px p-0 -m-px overflow-hidden whitespace-nowrap border-0;
+}
+
+.focus-visible {
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+}
+
+/* Estilos para dark mode (preparação futura) */
+@media (prefers-color-scheme: dark) {
+  .dark-mode {
+    @apply bg-gray-900 text-white;
+  }
+
+  .dark-mode .card {
+    @apply bg-gray-800 border-gray-700;
+  }
+
+  .dark-mode .input {
+    @apply bg-gray-800 border-gray-700 text-white;
+  }
+}
+
+/* Estilos para animações de entrada */
+.slide-in-right {
+  animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.slide-in-left {
+  animation: slideInLeft 0.3s ease-out;
+}
+
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.slide-in-up {
+  animation: slideInUp 0.3s ease-out;
+}
+
+@keyframes slideInUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.slide-in-down {
+  animation: slideInDown 0.3s ease-out;
+}
+
+@keyframes slideInDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Estilos para zoom */
+.zoom-in {
+  animation: zoomIn 0.3s ease-out;
+}
+
+@keyframes zoomIn {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Estilos para pulse */
+.pulse-animation {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Estilos para bounce */
+.bounce-animation {
+  animation: bounce 1s infinite;
+}
+
+@keyframes bounce {
+  0%,
+  20%,
+  53%,
+  80%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  40%,
+  43% {
+    transform: translate3d(0, -30px, 0);
+  }
+  70% {
+    transform: translate3d(0, -15px, 0);
+  }
+  90% {
+    transform: translate3d(0, -4px, 0);
+  }
+}
+
+/* Estilos para shake */
+.shake-animation {
+  animation: shake 0.5s;
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-10px);
+  }
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(10px);
+  }
+}
+
+/* Estilos para loading states */
+.skeleton {
+  @apply animate-pulse bg-gray-200 rounded;
+}
+
+.skeleton-text {
+  @apply h-4 bg-gray-200 rounded;
+}
+
+.skeleton-avatar {
+  @apply h-10 w-10 bg-gray-200 rounded-full;
+}
+
+.skeleton-button {
+  @apply h-10 w-24 bg-gray-200 rounded;
+}
+
+/* Estilos para gradientes */
+.gradient-blue {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.gradient-green {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.gradient-purple {
+  background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+}
+
+.gradient-orange {
+  background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+}
+
+/* Estilos para glassmorphism */
+.glass {
+  @apply backdrop-blur-md bg-white bg-opacity-20 border border-white border-opacity-20;
+}
+
+/* Estilos para neumorphism */
+.neumorphism {
+  background: #e0e0e0;
+  box-shadow: 20px 20px 60px #bebebe, -20px -20px 60px #ffffff;
+}
+
+.neumorphism-inset {
+  background: #e0e0e0;
+  box-shadow: inset 20px 20px 60px #bebebe, inset -20px -20px 60px #ffffff;
+}
+
+/* Estilos para scrollbar personalizada */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  @apply bg-gray-100 rounded;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-gray-400 rounded hover:bg-gray-500;
+}
+
+/* Estilos para seleção de texto */
+::selection {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+::-moz-selection {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+/* Estilos para focus trap */
+.focus-trap {
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+}
+
+/* Estilos para high contrast mode */
+@media (prefers-contrast: high) {
+  .high-contrast {
+    @apply border-2 border-black;
+  }
+}
+
+/* Estilos para reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .respect-motion-preference {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Estilos para orientação */
+@media (orientation: landscape) {
+  .landscape-only {
+    @apply block;
+  }
+  .portrait-only {
+    @apply hidden;
+  }
+}
+
+@media (orientation: portrait) {
+  .landscape-only {
+    @apply hidden;
+  }
+  .portrait-only {
+    @apply block;
+  }
+}
+
+/* Estilos para dispositivos touch */
+@media (hover: none) and (pointer: coarse) {
+  .touch-device {
+    @apply block;
+  }
+  .non-touch-device {
+    @apply hidden;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .touch-device {
+    @apply hidden;
+  }
+  .non-touch-device {
+    @apply block;
+  }
+}
