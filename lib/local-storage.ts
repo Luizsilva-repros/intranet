@@ -71,7 +71,7 @@ export interface Settings {
   updated_at: string
 }
 
-// Dados iniciais
+// Dados iniciais (apenas para primeira inicialização)
 const initialCategories: Category[] = [
   {
     id: "1",
@@ -154,8 +154,6 @@ const initialLinks: Link[] = [
   },
 ]
 
-// Atualizar os usuários iniciais com hashes consistentes:
-
 const initialUsers: User[] = [
   {
     id: "1",
@@ -165,7 +163,7 @@ const initialUsers: User[] = [
     active: true,
     group_ids: ["1"],
     groups: ["admin"],
-    password_hash: "hashed_admin123_1", // Senha: admin123
+    password_hash: "hashed_admin123_1",
     last_password_reset: new Date().toISOString(),
     created_at: new Date().toISOString(),
   },
@@ -177,7 +175,7 @@ const initialUsers: User[] = [
     active: true,
     group_ids: ["1"],
     groups: ["admin"],
-    password_hash: "hashed_123456_2", // Senha: 123456
+    password_hash: "hashed_123456_2",
     last_password_reset: new Date().toISOString(),
     created_at: new Date().toISOString(),
   },
@@ -189,7 +187,7 @@ const initialUsers: User[] = [
     active: true,
     group_ids: ["2", "7"],
     groups: ["rh", "user"],
-    password_hash: "hashed_123456_3", // Senha: 123456
+    password_hash: "hashed_123456_3",
     last_password_reset: new Date().toISOString(),
     created_at: new Date().toISOString(),
   },
@@ -353,25 +351,124 @@ const initialSettings: Settings = {
   updated_at: new Date().toISOString(),
 }
 
-// Funções de inicialização
+// ✅ FUNÇÃO DE INICIALIZAÇÃO PROTEGIDA - NÃO SOBRESCREVE DADOS EXISTENTES
 export function initializeData() {
-  if (!localStorage.getItem("intranet_categories")) {
-    localStorage.setItem("intranet_categories", JSON.stringify(initialCategories))
+  // Verificar se é a primeira vez que o sistema está sendo executado
+  const isFirstRun = !localStorage.getItem("intranet_initialized")
+
+  // Só inicializar com dados padrão se for a primeira execução
+  if (isFirstRun) {
+    console.log("🚀 Primeira execução - Inicializando dados padrão...")
+
+    // Inicializar apenas se não existir
+    if (!localStorage.getItem("intranet_categories")) {
+      localStorage.setItem("intranet_categories", JSON.stringify(initialCategories))
+      console.log("✅ Categorias iniciais criadas")
+    }
+
+    if (!localStorage.getItem("intranet_links")) {
+      localStorage.setItem("intranet_links", JSON.stringify(initialLinks))
+      console.log("✅ Links iniciais criados")
+    }
+
+    if (!localStorage.getItem("intranet_users")) {
+      localStorage.setItem("intranet_users", JSON.stringify(initialUsers))
+      console.log("✅ Usuários iniciais criados")
+    }
+
+    if (!localStorage.getItem("intranet_posts")) {
+      localStorage.setItem("intranet_posts", JSON.stringify(initialPosts))
+      console.log("✅ Posts iniciais criados")
+    }
+
+    if (!localStorage.getItem("intranet_extensions")) {
+      localStorage.setItem("intranet_extensions", JSON.stringify(initialExtensions))
+      console.log("✅ Ramais iniciais criados")
+    }
+
+    if (!localStorage.getItem("intranet_settings")) {
+      localStorage.setItem("intranet_settings", JSON.stringify(initialSettings))
+      console.log("✅ Configurações iniciais criadas")
+    }
+
+    // Marcar que o sistema já foi inicializado
+    localStorage.setItem("intranet_initialized", "true")
+    localStorage.setItem("intranet_init_date", new Date().toISOString())
+    console.log("🎯 Sistema inicializado com sucesso!")
+  } else {
+    console.log("✅ Sistema já inicializado - Mantendo dados existentes")
+
+    // Verificar se algum dado essencial está faltando e criar apenas o que não existe
+    if (!localStorage.getItem("intranet_categories")) {
+      localStorage.setItem("intranet_categories", JSON.stringify([]))
+      console.log("⚠️ Categorias não encontradas - Criando estrutura vazia")
+    }
+
+    if (!localStorage.getItem("intranet_links")) {
+      localStorage.setItem("intranet_links", JSON.stringify([]))
+      console.log("⚠️ Links não encontrados - Criando estrutura vazia")
+    }
+
+    if (!localStorage.getItem("intranet_users")) {
+      localStorage.setItem("intranet_users", JSON.stringify([]))
+      console.log("⚠️ Usuários não encontrados - Criando estrutura vazia")
+    }
+
+    if (!localStorage.getItem("intranet_posts")) {
+      localStorage.setItem("intranet_posts", JSON.stringify([]))
+      console.log("⚠️ Posts não encontrados - Criando estrutura vazia")
+    }
+
+    if (!localStorage.getItem("intranet_extensions")) {
+      localStorage.setItem("intranet_extensions", JSON.stringify([]))
+      console.log("⚠️ Ramais não encontrados - Criando estrutura vazia")
+    }
+
+    if (!localStorage.getItem("intranet_settings")) {
+      localStorage.setItem("intranet_settings", JSON.stringify(initialSettings))
+      console.log("⚠️ Configurações não encontradas - Criando configurações padrão")
+    }
   }
-  if (!localStorage.getItem("intranet_links")) {
-    localStorage.setItem("intranet_links", JSON.stringify(initialLinks))
+}
+
+// ✅ FUNÇÃO PARA VERIFICAR STATUS DO SISTEMA
+export function getSystemInfo() {
+  const isInitialized = localStorage.getItem("intranet_initialized") === "true"
+  const initDate = localStorage.getItem("intranet_init_date")
+
+  return {
+    isInitialized,
+    initDate: initDate ? new Date(initDate) : null,
+    dataCount: {
+      users: getUsers().length,
+      categories: getCategories().length,
+      links: getLinks().length,
+      posts: getPosts().length,
+      extensions: getExtensions().length,
+    },
   }
-  if (!localStorage.getItem("intranet_users")) {
-    localStorage.setItem("intranet_users", JSON.stringify(initialUsers))
-  }
-  if (!localStorage.getItem("intranet_posts")) {
-    localStorage.setItem("intranet_posts", JSON.stringify(initialPosts))
-  }
-  if (!localStorage.getItem("intranet_extensions")) {
-    localStorage.setItem("intranet_extensions", JSON.stringify(initialExtensions))
-  }
-  if (!localStorage.getItem("intranet_settings")) {
-    localStorage.setItem("intranet_settings", JSON.stringify(initialSettings))
+}
+
+// ✅ FUNÇÃO PARA RESET COMPLETO (APENAS PARA DESENVOLVIMENTO/EMERGÊNCIA)
+export function resetAllData() {
+  if (confirm("⚠️ ATENÇÃO: Isso irá apagar TODOS os dados do sistema!\n\nTem certeza que deseja continuar?")) {
+    if (
+      confirm(
+        "🚨 ÚLTIMA CONFIRMAÇÃO: Todos os usuários, posts, links e configurações serão perdidos!\n\nConfirma o reset completo?",
+      )
+    ) {
+      localStorage.removeItem("intranet_categories")
+      localStorage.removeItem("intranet_links")
+      localStorage.removeItem("intranet_users")
+      localStorage.removeItem("intranet_posts")
+      localStorage.removeItem("intranet_extensions")
+      localStorage.removeItem("intranet_settings")
+      localStorage.removeItem("intranet_initialized")
+      localStorage.removeItem("intranet_init_date")
+
+      console.log("🔄 Sistema resetado - Recarregando página...")
+      window.location.reload()
+    }
   }
 }
 
@@ -786,26 +883,11 @@ export function hashPassword(password: string): string {
   return `hashed_${password}_${Date.now()}`
 }
 
-// Adicionar função de validação de senha após a função hashPassword:
-
 export function validatePassword(inputPassword: string, storedHash: string): boolean {
-  // Para demonstração, vamos usar uma validação simples
-  // Em produção, use bcrypt ou similar
   const expectedHash = `hashed_${inputPassword}_`
   return storedHash.startsWith(expectedHash)
 }
 
-// Adicionar função para criar hash determinístico para usuários iniciais:
 export function createInitialHash(password: string, userId: string): string {
   return `hashed_${password}_${userId}`
-}
-
-export function resetAllData() {
-  localStorage.removeItem("intranet_categories")
-  localStorage.removeItem("intranet_links")
-  localStorage.removeItem("intranet_users")
-  localStorage.removeItem("intranet_posts")
-  localStorage.removeItem("intranet_extensions")
-  localStorage.removeItem("intranet_settings")
-  initializeData()
 }

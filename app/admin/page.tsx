@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Switch } from "@/components/ui/switch"
 import {
   getUsers,
   getCategories,
@@ -31,11 +32,11 @@ import {
   addExtension,
   updateExtension,
   deleteExtension,
-  updatePost,
   deletePost,
   getSettings,
   updateSettings,
   initializeData,
+  savePosts,
 } from "@/lib/local-storage"
 import type { User, Category, Link as LinkType, Post, Extension, Settings } from "@/lib/local-storage"
 import {
@@ -52,6 +53,8 @@ import {
   Phone,
   Eye,
   EyeOff,
+  Upload,
+  X,
 } from "lucide-react"
 
 const availableGroups = ["admin", "rh", "financeiro", "vendas", "ti", "suporte", "user"]
@@ -133,6 +136,18 @@ export default function AdminPage() {
   const [showSettingsDialog, setShowSettingsDialog] = useState(false)
   const [showPostDialog, setShowPostDialog] = useState(false)
   const [showExtensionDialog, setShowExtensionDialog] = useState(false)
+
+  // Estados para edição de posts
+  const [editPostForm, setEditPostForm] = useState({
+    title: "",
+    content: "",
+    type: "general" as Post["type"],
+    priority: "medium" as Post["priority"],
+    published: true,
+    expires_at: "",
+    image_url: "",
+  })
+  const [editImagePreview, setEditImagePreview] = useState("")
 
   useEffect(() => {
     initializeData()
@@ -460,21 +475,73 @@ export default function AdminPage() {
     }
   }
 
-  const handleTogglePostStatus = (postId: string) => {
-    const post = posts.find((p) => p.id === postId)
-    if (!post) return
+  // Funções para posts
+  const openEditPostDialog = (post: Post) => {
+    setEditingPost(post)
+    setEditPostForm({
+      title: post.title,
+      content: post.content,
+      type: post.type,
+      priority: post.priority,
+      published: post.published,
+      expires_at: post.expires_at || "",
+      image_url: post.image_url || "",
+    })
+    setEditImagePreview(post.image_url || "")
+    setShowPostDialog(true)
+  }
+
+  const handleUpdatePost = () => {
+    if (!editingPost || !editPostForm.title || !editPostForm.content) {
+      showMessage("Título e conteúdo são obrigatórios")
+      return
+    }
 
     try {
-      updatePost(postId, {
-        published: !post.published,
-        status: !post.published ? "published" : "draft",
-        published_at: !post.published ? new Date().toISOString() : post.published_at,
-      })
-      loadData()
-      showMessage(`Post ${!post.published ? "publicado" : "despublicado"} com sucesso!`)
+      const now = new Date().toISOString()
+      const updatedPosts = posts.map((post) =>
+        post.id === editingPost.id
+          ? {
+              ...post,
+              title: editPostForm.title,
+              content: editPostForm.content,
+              type: editPostForm.type,
+              priority: editPostForm.priority,
+              published: editPostForm.published,
+              published_at: editPostForm.published && !post.published ? now : post.published_at,
+              expires_at: editPostForm.expires_at || undefined,
+              updated_at: now,
+              image_url: editPostForm.image_url || undefined,
+            }
+          : post,
+      )
+
+      setPosts(updatedPosts)
+      savePosts(updatedPosts)
+      setShowPostDialog(false)
+      setEditingPost(null)
+      setEditImagePreview("")
+      showMessage("Post atualizado com sucesso!")
     } catch (error) {
-      showMessage("Erro ao atualizar status do post")
+      showMessage("Erro ao atualizar post")
     }
+  }
+
+  const handleTogglePostStatus = (postId: string) => {
+    const now = new Date().toISOString()
+    const updatedPosts = posts.map((post) =>
+      post.id === postId
+        ? {
+            ...post,
+            published: !post.published,
+            published_at: !post.published ? now : post.published_at,
+            updated_at: now,
+          }
+        : post,
+    )
+    setPosts(updatedPosts)
+    savePosts(updatedPosts)
+    showMessage("Status do post atualizado!")
   }
 
   const handleDeletePost = (id: string) => {
@@ -515,6 +582,65 @@ export default function AdminPage() {
 
   const toggleGroupSelection = (groups: string[], group: string) => {
     return groups.includes(group) ? groups.filter((g) => g !== group) : [...groups, group]
+  }
+
+  // Função para redimensionar imagem
+  const resizeImage = (file: File, maxWidth = 400, maxHeight = 600): Promise<string> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement("canvas")
+      const ctx = canvas.getContext("2d")!
+      const img = new Image()
+
+      img.onload = () => {
+        let { width, height } = img
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width
+            width = maxWidth
+          }
+        } else {
+          if (height > maxHeight) {
+            width = (width * maxHeight) / height
+            height = maxHeight
+          }
+        }
+
+        canvas.width = width
+        canvas.height = height
+        ctx.drawImage(img, 0, 0, width, height)
+        resolve(canvas.toDataURL("image/jpeg", 0.8))
+      }
+
+      img.src = URL.createObjectURL(file)
+    })
+  }
+
+  const handleFileSelect = async (file: File | null) => {
+    if (!file) return
+
+    if (!file.type.startsWith("image/")) {
+      showMessage("Por favor, selecione apenas arquivos de imagem")
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      showMessage("A imagem deve ter no máximo 5MB")
+      return
+    }
+
+    try {
+      const resizedBase64 = await resizeImage(file, 400, 600)
+      setEditImagePreview(resizedBase64)
+      setEditPostForm({ ...editPostForm, image_url: resizedBase64 })
+    } catch (error) {
+      showMessage("Erro ao processar a imagem")
+    }
+  }
+
+  const removeImage = () => {
+    setEditImagePreview("")
+    setEditPostForm({ ...editPostForm, image_url: "" })
   }
 
   if (loading) {
@@ -817,6 +943,15 @@ export default function AdminPage() {
                           <Badge variant="outline">{post.type}</Badge>
                           {post.priority === "high" && <Badge variant="destructive">Urgente</Badge>}
                         </div>
+                        {post.image_url && (
+                          <div className="mb-2">
+                            <img
+                              src={post.image_url || "/placeholder.svg"}
+                              alt={post.title}
+                              className="w-24 h-32 object-cover rounded border shadow-sm"
+                            />
+                          </div>
+                        )}
                         <p className="text-sm text-gray-600 line-clamp-2">{post.content}</p>
                         <div className="flex items-center gap-4 text-xs text-gray-500">
                           <span>Criado: {new Date(post.created_at).toLocaleDateString("pt-BR")}</span>
@@ -829,6 +964,9 @@ export default function AdminPage() {
                         </div>
                       </div>
                       <div className="flex gap-2 ml-4">
+                        <Button variant="outline" size="sm" onClick={() => openEditPostDialog(post)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
@@ -1504,6 +1642,138 @@ export default function AdminPage() {
                 </div>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialog para editar post */}
+        <Dialog open={showPostDialog} onOpenChange={setShowPostDialog}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>Editar Post</DialogTitle>
+              <DialogDescription>Faça as alterações necessárias na publicação.</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="edit-title">Título</Label>
+                <Input
+                  id="edit-title"
+                  value={editPostForm.title}
+                  onChange={(e) => setEditPostForm({ ...editPostForm, title: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit-type">Tipo</Label>
+                  <Select
+                    value={editPostForm.type}
+                    onValueChange={(value: Post["type"]) => setEditPostForm({ ...editPostForm, type: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="general">🔹 Geral</SelectItem>
+                      <SelectItem value="announcement">📢 Comunicado</SelectItem>
+                      <SelectItem value="event">🎉 Evento</SelectItem>
+                      <SelectItem value="birthday">🎂 Aniversário</SelectItem>
+                      <SelectItem value="departure">👋 Desligamento</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="edit-priority">Prioridade</Label>
+                  <Select
+                    value={editPostForm.priority}
+                    onValueChange={(value: Post["priority"]) => setEditPostForm({ ...editPostForm, priority: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">🟢 Baixa</SelectItem>
+                      <SelectItem value="medium">🟡 Média</SelectItem>
+                      <SelectItem value="high">🔴 Alta</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-expires">Data de Expiração</Label>
+                <Input
+                  id="edit-expires"
+                  type="datetime-local"
+                  value={editPostForm.expires_at}
+                  onChange={(e) => setEditPostForm({ ...editPostForm, expires_at: e.target.value })}
+                />
+              </div>
+
+              {/* Upload de Imagem no Dialog de Edição */}
+              <div className="grid gap-2">
+                <Label>Imagem (opcional)</Label>
+                <div className="mt-2">
+                  {!editImagePreview ? (
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors">
+                      <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                      <div className="mt-2">
+                        <label htmlFor="edit-file-upload" className="cursor-pointer">
+                          <span className="text-sm font-medium text-gray-900">Clique para fazer upload</span>
+                          <span className="block text-xs text-gray-500">PNG, JPG, GIF até 5MB</span>
+                        </label>
+                        <input
+                          id="edit-file-upload"
+                          name="edit-file-upload"
+                          type="file"
+                          className="sr-only"
+                          accept="image/*"
+                          onChange={(e) => handleFileSelect(e.target.files?.[0] || null)}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <img
+                        src={editImagePreview || "/placeholder.svg"}
+                        alt="Preview"
+                        className="w-full max-w-sm h-auto rounded-lg border shadow-sm"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        className="absolute top-2 right-2"
+                        onClick={() => removeImage()}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="edit-content">Conteúdo</Label>
+                <Textarea
+                  id="edit-content"
+                  value={editPostForm.content}
+                  onChange={(e) => setEditPostForm({ ...editPostForm, content: e.target.value })}
+                  rows={6}
+                />
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="edit-published"
+                  checked={editPostForm.published}
+                  onCheckedChange={(checked) => setEditPostForm({ ...editPostForm, published: checked })}
+                />
+                <Label htmlFor="edit-published">Publicado</Label>
+              </div>
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setShowPostDialog(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleUpdatePost}>Salvar Alterações</Button>
+            </div>
           </DialogContent>
         </Dialog>
       </main>

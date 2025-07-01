@@ -123,6 +123,43 @@ export default function AdminPostsPage() {
     })
   }
 
+  // Função para redimensionar imagem
+  const resizeImage = (file: File, maxWidth = 400, maxHeight = 600): Promise<string> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement("canvas")
+      const ctx = canvas.getContext("2d")!
+      const img = new Image()
+
+      img.onload = () => {
+        // Calcular proporções mantendo aspect ratio
+        let { width, height } = img
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width
+            width = maxWidth
+          }
+        } else {
+          if (height > maxHeight) {
+            width = (width * maxHeight) / height
+            height = maxHeight
+          }
+        }
+
+        canvas.width = width
+        canvas.height = height
+
+        // Desenhar imagem redimensionada
+        ctx.drawImage(img, 0, 0, width, height)
+
+        // Converter para base64 com qualidade otimizada
+        resolve(canvas.toDataURL("image/jpeg", 0.8))
+      }
+
+      img.src = URL.createObjectURL(file)
+    })
+  }
+
   // Função para lidar com seleção de arquivo
   const handleFileSelect = async (file: File | null, isEdit = false) => {
     if (!file) return
@@ -140,16 +177,17 @@ export default function AdminPostsPage() {
     }
 
     try {
-      const base64 = await fileToBase64(file)
+      // Redimensionar imagem para tamanho otimizado
+      const resizedBase64 = await resizeImage(file, 400, 600)
 
       if (isEdit) {
         setEditSelectedFile(file)
-        setEditImagePreview(base64)
-        setEditPostForm({ ...editPostForm, image_url: base64 })
+        setEditImagePreview(resizedBase64)
+        setEditPostForm({ ...editPostForm, image_url: resizedBase64 })
       } else {
         setSelectedFile(file)
-        setImagePreview(base64)
-        setNewPost({ ...newPost, image_url: base64 })
+        setImagePreview(resizedBase64)
+        setNewPost({ ...newPost, image_url: resizedBase64 })
       }
     } catch (error) {
       showMessage("Erro ao processar a imagem")
@@ -528,7 +566,7 @@ export default function AdminPostsPage() {
                               <img
                                 src={post.image_url || "/placeholder.svg"}
                                 alt={post.title}
-                                className="w-20 h-20 object-cover rounded border"
+                                className="w-24 h-32 object-cover rounded border shadow-sm"
                               />
                             </div>
                           )}
@@ -598,7 +636,7 @@ export default function AdminPostsPage() {
                               <img
                                 src={post.image_url || "/placeholder.svg"}
                                 alt={post.title}
-                                className="w-20 h-20 object-cover rounded border"
+                                className="w-24 h-32 object-cover rounded border shadow-sm"
                               />
                             </div>
                           )}

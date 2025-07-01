@@ -84,6 +84,30 @@
   object-fit: cover;
 }
 
+/* Estilos para imagens do feed - tamanho compacto */
+.post-image-feed-compact {
+  max-width: 400px;
+  max-height: 600px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  margin: 0 auto;
+  display: block;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+}
+
+/* Thumbnails para admin */
+.post-thumbnail {
+  width: 96px;
+  height: 128px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
 /* Responsividade para imagens do feed */
 @media (max-width: 640px) {
   .post-image-feed-centered {
@@ -94,6 +118,21 @@
 @media (max-width: 480px) {
   .post-image-feed-centered {
     @apply max-w-64 max-h-48;
+  }
+}
+
+/* Responsividade para imagens compactas */
+@media (max-width: 640px) {
+  .post-image-feed-compact {
+    max-width: 300px;
+    max-height: 450px;
+  }
+}
+
+@media (max-width: 480px) {
+  .post-image-feed-compact {
+    max-width: 250px;
+    max-height: 375px;
   }
 }
 

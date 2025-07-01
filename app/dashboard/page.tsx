@@ -23,6 +23,7 @@ import {
   FileText,
   Users,
   LinkIcon,
+  Info,
 } from "lucide-react"
 import {
   initializeData,
@@ -31,6 +32,8 @@ import {
   getPublishedPosts,
   getExtensions,
   getSettings,
+  getSystemInfo,
+  resetAllData,
   getPostTypeIcon,
   getPostTypeName,
   getPriorityColor,
@@ -49,6 +52,7 @@ export default function DashboardPage() {
   const [posts, setPosts] = useState<Post[]>([])
   const [extensions, setExtensions] = useState<Extension[]>([])
   const [settings, setSettings] = useState<SettingsType | null>(null)
+  const [systemInfo, setSystemInfo] = useState<any>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [loading, setLoading] = useState(true)
   const router = useRouter()
@@ -71,12 +75,14 @@ export default function DashboardPage() {
       const publishedPosts = getPublishedPosts()
       const allExtensions = getExtensions()
       const appSettings = getSettings()
+      const sysInfo = getSystemInfo()
 
       setCategories(userCategories)
       setLinks(userLinks)
       setPosts(publishedPosts)
       setExtensions(allExtensions)
       setSettings(appSettings)
+      setSystemInfo(sysInfo)
     } catch (error) {
       console.error("Erro ao carregar dados:", error)
       router.push("/login")
@@ -167,6 +173,18 @@ export default function DashboardPage() {
             )}
             <div>
               <h1 className="text-xl font-bold text-gray-900">{settings?.company_name || "Intranet Corporativa"}</h1>
+              {systemInfo && (
+                <div className="flex items-center space-x-2 mt-1">
+                  <Badge variant="outline" className="text-xs">
+                    {systemInfo.isInitialized ? "✅ Ativo" : "⚠️ Inicializando"}
+                  </Badge>
+                  {systemInfo.initDate && (
+                    <span className="text-xs text-gray-500">
+                      Desde {systemInfo.initDate.toLocaleDateString("pt-BR")}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -197,9 +215,8 @@ export default function DashboardPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  if (confirm("Resetar todos os dados? Isso irá recarregar a página.")) {
-                    localStorage.clear()
-                    window.location.reload()
+                  if (confirm("⚠️ Resetar todos os dados? Isso irá recarregar a página e apagar TUDO!")) {
+                    resetAllData()
                   }
                 }}
               >
@@ -219,6 +236,40 @@ export default function DashboardPage() {
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Bem-vindo, {user.name}!</h2>
           <p className="text-gray-600">Fique por dentro das novidades da empresa e acesse os sistemas corporativos.</p>
+
+          {/* Info do Sistema para Admins */}
+          {user.role === "admin" && systemInfo && (
+            <Card className="mt-4 bg-blue-50 border-blue-200">
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-2 mb-2">
+                  <Info className="h-4 w-4 text-blue-600" />
+                  <h3 className="font-medium text-blue-900">Status do Sistema</h3>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+                  <div>
+                    <span className="text-blue-700 font-medium">Usuários:</span>
+                    <span className="ml-1 text-blue-900">{systemInfo.dataCount.users}</span>
+                  </div>
+                  <div>
+                    <span className="text-blue-700 font-medium">Categorias:</span>
+                    <span className="ml-1 text-blue-900">{systemInfo.dataCount.categories}</span>
+                  </div>
+                  <div>
+                    <span className="text-blue-700 font-medium">Links:</span>
+                    <span className="ml-1 text-blue-900">{systemInfo.dataCount.links}</span>
+                  </div>
+                  <div>
+                    <span className="text-blue-700 font-medium">Posts:</span>
+                    <span className="ml-1 text-blue-900">{systemInfo.dataCount.posts}</span>
+                  </div>
+                  <div>
+                    <span className="text-blue-700 font-medium">Ramais:</span>
+                    <span className="ml-1 text-blue-900">{systemInfo.dataCount.extensions}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         <Tabs defaultValue="feed" className="space-y-6">
@@ -298,11 +349,12 @@ export default function DashboardPage() {
 
                     <CardContent className="text-center space-y-4">
                       {post.image_url && (
-                        <div className="flex justify-center">
+                        <div className="flex justify-center mb-4">
                           <img
                             src={post.image_url || "/placeholder.svg"}
                             alt={post.title}
-                            className="max-w-full h-auto rounded-lg shadow-sm"
+                            className="max-w-sm max-h-80 w-auto h-auto object-contain rounded-lg shadow-sm border"
+                            style={{ maxWidth: "400px", maxHeight: "600px" }}
                           />
                         </div>
                       )}

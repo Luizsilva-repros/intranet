@@ -11,7 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Building2, Mail, Lock, Eye, EyeOff, CheckCircle } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
-import { initializeData, isEmailAuthorized, validatePassword, getSettings } from "@/lib/local-storage"
+import { initializeData, getSettings } from "@/lib/local-storage"
+import { authenticateUser } from "@/lib/auth-service"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -35,10 +36,11 @@ export default function LoginPage() {
   useEffect(() => {
     initializeData()
 
-    // Carregar configurações para pegar a logo
+    // Carregar configurações
     const currentSettings = getSettings()
     setSettings(currentSettings)
 
+    // Verificar se já está logado
     const savedUser = localStorage.getItem("intranet_user")
     if (savedUser) {
       router.push("/dashboard")
@@ -52,28 +54,29 @@ export default function LoginPage() {
     setSuccess("")
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      // Usar novo serviço de autenticação
+      const authResult = await authenticateUser(email, password)
 
-      const authorizedUser = isEmailAuthorized(email)
-
-      if (!authorizedUser) {
-        throw new Error("Email não autorizado. Solicite acesso ao administrador.")
+      if (!authResult.success) {
+        throw new Error(authResult.error || "Falha na autenticação")
       }
 
-      // Verificar se a senha corresponde ao hash armazenado
-      const isValidPassword = validatePassword(password, authorizedUser.password_hash || "")
-      if (!isValidPassword) {
-        throw new Error("Senha incorreta. Verifique suas credenciais.")
-      }
+      const user = authResult.user!
 
+      // Salvar dados do usuário
       const userData = {
-        id: authorizedUser.id,
-        email: authorizedUser.email,
-        name: authorizedUser.name,
-        role: authorizedUser.role,
-        active: authorizedUser.active,
-        group_ids: authorizedUser.group_ids || [],
-        groups: authorizedUser.groups || [],
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        displayName: user.displayName,
+        department: user.department,
+        title: user.title,
+        role: user.role,
+        active: true,
+        group_ids: user.groups,
+        groups: user.groups,
+        source: user.source,
+        lastLogin: user.lastLogin,
       }
 
       localStorage.setItem("intranet_user", JSON.stringify(userData))
@@ -113,7 +116,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          {/* Logo da empresa ou ícone padrão */}
+          {/* Logo da empresa */}
           <div className="mx-auto mb-4 flex items-center justify-center">
             {settings?.logo_url ? (
               <img
@@ -121,7 +124,6 @@ export default function LoginPage() {
                 alt="Logo da empresa"
                 className="h-16 w-auto max-w-[200px] object-contain"
                 onError={(e) => {
-                  // Se a imagem falhar ao carregar, mostra o ícone padrão
                   e.currentTarget.style.display = "none"
                   const fallbackIcon = e.currentTarget.nextElementSibling as HTMLElement
                   if (fallbackIcon) {
@@ -131,7 +133,6 @@ export default function LoginPage() {
               />
             ) : null}
 
-            {/* Ícone padrão - só aparece se não houver logo ou se a logo falhar */}
             <div
               className={`h-12 w-12 items-center justify-center rounded-full bg-blue-100 ${
                 settings?.logo_url ? "hidden" : "flex"
@@ -144,11 +145,6 @@ export default function LoginPage() {
 
           <CardTitle className="text-2xl font-bold">{settings?.company_name || "Intranet Corporativa"}</CardTitle>
           <CardDescription>Acesse com suas credenciais corporativas</CardDescription>
-
-          <div className="flex items-center justify-center space-x-2 mt-2">
-            <CheckCircle className="h-3 w-3 text-green-600" />
-            <span className="text-xs text-green-600">Sistema Online</span>
-          </div>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
@@ -211,7 +207,7 @@ export default function LoginPage() {
             )}
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Entrando..." : "Entrar"}
+              {loading ? "Autenticando..." : "Entrar"}
             </Button>
 
             <div className="mt-4 text-center">
