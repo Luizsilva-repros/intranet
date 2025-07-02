@@ -2014,12 +2014,51 @@ export default function AdminPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="settings-logo">URL do Logo</Label>
-                <Input
-                  id="settings-logo"
-                  value={editingSettings.logo_url || ""}
-                  onChange={(e) => setEditingSettings({ ...editingSettings, logo_url: e.target.value })}
-                />
+                <Label>Logo da Empresa</Label>
+                <div className="space-y-2">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0]
+                      if (file) {
+                        if (file.size > 2 * 1024 * 1024) {
+                          showMessage("A imagem deve ter no máximo 2MB")
+                          return
+                        }
+
+                        try {
+                          const reader = new FileReader()
+                          reader.onload = (event) => {
+                            const base64 = event.target?.result as string
+                            setEditingSettings({ ...editingSettings, logo_url: base64 })
+                          }
+                          reader.readAsDataURL(file)
+                        } catch (error) {
+                          showMessage("Erro ao processar a imagem")
+                        }
+                      }
+                    }}
+                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  />
+                  {editingSettings.logo_url && (
+                    <div className="flex items-center space-x-2">
+                      <img
+                        src={editingSettings.logo_url || "/placeholder.svg"}
+                        alt="Preview"
+                        className="h-12 w-auto max-w-[120px] object-contain border rounded"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setEditingSettings({ ...editingSettings, logo_url: "" })}
+                      >
+                        <X className="h-4 w-4 mr-2" />
+                        Remover
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
               <div>
                 <Label>Cores do Sistema</Label>
