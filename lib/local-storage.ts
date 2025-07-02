@@ -7,8 +7,19 @@ export interface User {
   active: boolean
   group_ids: string[]
   groups: string[]
+  link_permissions: string[] // IDs dos links específicos que o usuário pode acessar
   password_hash?: string
   last_password_reset?: string
+  last_login?: string // Data do último login
+  created_at: string
+}
+
+export interface Group {
+  id: string
+  name: string
+  description?: string
+  color: string
+  permissions: string[] // IDs das categorias/links que o grupo pode acessar
   created_at: string
 }
 
@@ -17,6 +28,7 @@ export interface Category {
   name: string
   description?: string
   color: string
+  icon?: string
   groups: string[]
   created_at: string
 }
@@ -27,6 +39,7 @@ export interface Link {
   name: string
   url: string
   description?: string
+  icon?: string
   category_id: string
   category: string
   groups: string[]
@@ -72,12 +85,64 @@ export interface Settings {
 }
 
 // Dados iniciais (apenas para primeira inicialização)
+const initialGroups: Group[] = [
+  {
+    id: "1",
+    name: "Administradores",
+    description: "Acesso total ao sistema",
+    color: "#ef4444",
+    permissions: [],
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "2",
+    name: "Recursos Humanos",
+    description: "Acesso aos sistemas de RH",
+    color: "#10b981",
+    permissions: [],
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "3",
+    name: "Financeiro",
+    description: "Acesso aos sistemas financeiros",
+    color: "#f59e0b",
+    permissions: [],
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "4",
+    name: "Vendas",
+    description: "Acesso aos sistemas de vendas",
+    color: "#8b5cf6",
+    permissions: [],
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "5",
+    name: "TI",
+    description: "Acesso aos sistemas de TI",
+    color: "#3b82f6",
+    permissions: [],
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "6",
+    name: "Usuários Padrão",
+    description: "Acesso básico ao sistema",
+    color: "#6b7280",
+    permissions: [],
+    created_at: new Date().toISOString(),
+  },
+]
+
 const initialCategories: Category[] = [
   {
     id: "1",
     name: "Sistemas Financeiros",
     description: "ERP, Contabilidade e Faturamento",
     color: "#10B981",
+    icon: "💰",
     groups: ["admin", "financeiro"],
     created_at: new Date().toISOString(),
   },
@@ -86,6 +151,7 @@ const initialCategories: Category[] = [
     name: "Recursos Humanos",
     description: "Gestão de Pessoas e Benefícios",
     color: "#3B82F6",
+    icon: "👥",
     groups: ["admin", "rh"],
     created_at: new Date().toISOString(),
   },
@@ -94,6 +160,7 @@ const initialCategories: Category[] = [
     name: "Vendas e CRM",
     description: "Gestão Comercial e Relacionamento",
     color: "#8B5CF6",
+    icon: "📈",
     groups: ["admin", "vendas"],
     created_at: new Date().toISOString(),
   },
@@ -102,7 +169,17 @@ const initialCategories: Category[] = [
     name: "Suporte Técnico",
     description: "Helpdesk e Documentação",
     color: "#F59E0B",
+    icon: "🛠️",
     groups: ["admin", "ti", "suporte"],
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "5",
+    name: "Comunicação",
+    description: "Email, Chat e Videoconferência",
+    color: "#06B6D4",
+    icon: "💬",
+    groups: ["admin", "user"],
     created_at: new Date().toISOString(),
   },
 ]
@@ -114,6 +191,7 @@ const initialLinks: Link[] = [
     name: "Sistema ERP",
     url: "https://erp.empresa.com.br",
     description: "Gestão empresarial integrada",
+    icon: "🏢",
     category_id: "1",
     category: "Sistemas Financeiros",
     groups: ["admin", "financeiro"],
@@ -125,6 +203,7 @@ const initialLinks: Link[] = [
     name: "Portal RH",
     url: "https://rh.empresa.com.br",
     description: "Gestão de colaboradores",
+    icon: "👤",
     category_id: "2",
     category: "Recursos Humanos",
     groups: ["admin", "rh"],
@@ -136,6 +215,7 @@ const initialLinks: Link[] = [
     name: "CRM Vendas",
     url: "https://crm.empresa.com.br",
     description: "Gestão de clientes e vendas",
+    icon: "💼",
     category_id: "3",
     category: "Vendas e CRM",
     groups: ["admin", "vendas"],
@@ -147,9 +227,22 @@ const initialLinks: Link[] = [
     name: "Helpdesk",
     url: "https://suporte.empresa.com.br",
     description: "Central de atendimento",
+    icon: "🎧",
     category_id: "4",
     category: "Suporte Técnico",
     groups: ["admin", "ti", "suporte"],
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "5",
+    title: "Email Corporativo",
+    name: "Email Corporativo",
+    url: "https://mail.empresa.com.br",
+    description: "Webmail da empresa",
+    icon: "📧",
+    category_id: "5",
+    category: "Comunicação",
+    groups: ["admin", "user"],
     created_at: new Date().toISOString(),
   },
 ]
@@ -163,8 +256,10 @@ const initialUsers: User[] = [
     active: true,
     group_ids: ["1"],
     groups: ["admin"],
+    link_permissions: [], // Admin tem acesso a tudo
     password_hash: "hashed_admin123_1",
     last_password_reset: new Date().toISOString(),
+    last_login: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 horas atrás
     created_at: new Date().toISOString(),
   },
   {
@@ -175,8 +270,10 @@ const initialUsers: User[] = [
     active: true,
     group_ids: ["1"],
     groups: ["admin"],
+    link_permissions: [],
     password_hash: "hashed_123456_2",
     last_password_reset: new Date().toISOString(),
+    last_login: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // 30 min atrás
     created_at: new Date().toISOString(),
   },
   {
@@ -185,10 +282,12 @@ const initialUsers: User[] = [
     name: "Lucas Souza",
     role: "user",
     active: true,
-    group_ids: ["2", "7"],
+    group_ids: ["2", "6"],
     groups: ["rh", "user"],
+    link_permissions: ["2", "5"], // Acesso específico ao Portal RH e Email
     password_hash: "hashed_123456_3",
     last_password_reset: new Date().toISOString(),
+    last_login: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), // 4 horas atrás
     created_at: new Date().toISOString(),
   },
 ]
@@ -361,6 +460,11 @@ export function initializeData() {
     console.log("🚀 Primeira execução - Inicializando dados padrão...")
 
     // Inicializar apenas se não existir
+    if (!localStorage.getItem("intranet_groups")) {
+      localStorage.setItem("intranet_groups", JSON.stringify(initialGroups))
+      console.log("✅ Grupos iniciais criados")
+    }
+
     if (!localStorage.getItem("intranet_categories")) {
       localStorage.setItem("intranet_categories", JSON.stringify(initialCategories))
       console.log("✅ Categorias iniciais criadas")
@@ -399,6 +503,11 @@ export function initializeData() {
     console.log("✅ Sistema já inicializado - Mantendo dados existentes")
 
     // Verificar se algum dado essencial está faltando e criar apenas o que não existe
+    if (!localStorage.getItem("intranet_groups")) {
+      localStorage.setItem("intranet_groups", JSON.stringify([]))
+      console.log("⚠️ Grupos não encontrados - Criando estrutura vazia")
+    }
+
     if (!localStorage.getItem("intranet_categories")) {
       localStorage.setItem("intranet_categories", JSON.stringify([]))
       console.log("⚠️ Categorias não encontradas - Criando estrutura vazia")
@@ -441,6 +550,7 @@ export function getSystemInfo() {
     initDate: initDate ? new Date(initDate) : null,
     dataCount: {
       users: getUsers().length,
+      groups: getGroups().length,
       categories: getCategories().length,
       links: getLinks().length,
       posts: getPosts().length,
@@ -457,6 +567,7 @@ export function resetAllData() {
         "🚨 ÚLTIMA CONFIRMAÇÃO: Todos os usuários, posts, links e configurações serão perdidos!\n\nConfirma o reset completo?",
       )
     ) {
+      localStorage.removeItem("intranet_groups")
       localStorage.removeItem("intranet_categories")
       localStorage.removeItem("intranet_links")
       localStorage.removeItem("intranet_users")
@@ -470,6 +581,64 @@ export function resetAllData() {
       window.location.reload()
     }
   }
+}
+
+// Funções para Groups
+export function getGroups(): Group[] {
+  const data = localStorage.getItem("intranet_groups")
+  return data ? JSON.parse(data) : []
+}
+
+export function saveGroups(groups: Group[]) {
+  localStorage.setItem("intranet_groups", JSON.stringify(groups))
+}
+
+export function addGroup(groupData: {
+  name: string
+  description?: string
+  color?: string
+  permissions?: string[]
+}): Group {
+  const groups = getGroups()
+  const newGroup: Group = {
+    id: Date.now().toString(),
+    name: groupData.name,
+    description: groupData.description || "",
+    color: groupData.color || "#6b7280",
+    permissions: groupData.permissions || [],
+    created_at: new Date().toISOString(),
+  }
+  const updatedGroups = [...groups, newGroup]
+  saveGroups(updatedGroups)
+  return newGroup
+}
+
+export function updateGroup(
+  id: string,
+  groupData: { name: string; description?: string; color?: string; permissions?: string[] },
+): Group | null {
+  const groups = getGroups()
+  const groupIndex = groups.findIndex((group) => group.id === id)
+  if (groupIndex === -1) return null
+
+  const updatedGroup = {
+    ...groups[groupIndex],
+    name: groupData.name,
+    description: groupData.description || "",
+    color: groupData.color || groups[groupIndex].color,
+    permissions: groupData.permissions || groups[groupIndex].permissions,
+  }
+  groups[groupIndex] = updatedGroup
+  saveGroups(groups)
+  return updatedGroup
+}
+
+export function deleteGroup(id: string): boolean {
+  const groups = getGroups()
+  const filteredGroups = groups.filter((group) => group.id !== id)
+  if (filteredGroups.length === groups.length) return false
+  saveGroups(filteredGroups)
+  return true
 }
 
 // Funções para Categories
@@ -492,6 +661,7 @@ export function addCategory(categoryData: {
   name: string
   description?: string
   color?: string
+  icon?: string
   groups?: string[]
 }): Category {
   const categories = getCategories()
@@ -500,6 +670,7 @@ export function addCategory(categoryData: {
     name: categoryData.name,
     description: categoryData.description || "",
     color: categoryData.color || "#3B82F6",
+    icon: categoryData.icon || "📁",
     groups: categoryData.groups || ["admin"],
     created_at: new Date().toISOString(),
   }
@@ -510,7 +681,7 @@ export function addCategory(categoryData: {
 
 export function updateCategory(
   id: string,
-  categoryData: { name: string; description?: string; color?: string; groups?: string[] },
+  categoryData: { name: string; description?: string; color?: string; icon?: string; groups?: string[] },
 ): Category | null {
   const categories = getCategories()
   const categoryIndex = categories.findIndex((cat) => cat.id === id)
@@ -521,6 +692,7 @@ export function updateCategory(
     name: categoryData.name,
     description: categoryData.description || "",
     color: categoryData.color || categories[categoryIndex].color,
+    icon: categoryData.icon || categories[categoryIndex].icon,
     groups: categoryData.groups || categories[categoryIndex].groups,
   }
   categories[categoryIndex] = updatedCategory
@@ -545,6 +717,13 @@ export function getLinks(): Link[] {
 export function getLinksForUser(user: User): Link[] {
   const links = getLinks()
   if (user.role === "admin") return links
+
+  // Se o usuário tem permissões específicas de links, usar essas
+  if (user.link_permissions && user.link_permissions.length > 0) {
+    return links.filter((link) => user.link_permissions.includes(link.id))
+  }
+
+  // Caso contrário, usar permissões por grupo
   return links.filter((link) => link.groups.some((group) => user.groups.includes(group)))
 }
 
@@ -552,7 +731,14 @@ export function saveLinks(links: Link[]) {
   localStorage.setItem("intranet_links", JSON.stringify(links))
 }
 
-export function addLink(linkData: { name: string; url: string; category: string; groups?: string[] }): Link {
+export function addLink(linkData: {
+  name: string
+  url: string
+  description?: string
+  icon?: string
+  category: string
+  groups?: string[]
+}): Link {
   const links = getLinks()
   const categories = getCategories()
   const category = categories.find((cat) => cat.name === linkData.category)
@@ -562,7 +748,8 @@ export function addLink(linkData: { name: string; url: string; category: string;
     title: linkData.name,
     name: linkData.name,
     url: linkData.url,
-    description: "",
+    description: linkData.description || "",
+    icon: linkData.icon || "🔗",
     category_id: category?.id || "1",
     category: linkData.category,
     groups: linkData.groups || ["admin"],
@@ -575,7 +762,14 @@ export function addLink(linkData: { name: string; url: string; category: string;
 
 export function updateLink(
   id: string,
-  linkData: { name: string; url: string; category: string; groups?: string[] },
+  linkData: {
+    name: string
+    url: string
+    description?: string
+    icon?: string
+    category: string
+    groups?: string[]
+  },
 ): Link | null {
   const links = getLinks()
   const linkIndex = links.findIndex((link) => link.id === id)
@@ -589,6 +783,8 @@ export function updateLink(
     title: linkData.name,
     name: linkData.name,
     url: linkData.url,
+    description: linkData.description || "",
+    icon: linkData.icon || links[linkIndex].icon,
     category_id: category?.id || links[linkIndex].category_id,
     category: linkData.category,
     groups: linkData.groups || links[linkIndex].groups,
@@ -622,6 +818,7 @@ export function addUser(userData: {
   role: string
   password: string
   groups?: string[]
+  link_permissions?: string[]
 }): User {
   const users = getUsers()
   const newUser: User = {
@@ -632,8 +829,10 @@ export function addUser(userData: {
     active: true,
     group_ids: userData.groups || ["user"],
     groups: userData.groups || ["user"],
+    link_permissions: userData.link_permissions || [],
     password_hash: `hashed_${userData.password}_${Date.now()}`,
     last_password_reset: new Date().toISOString(),
+    last_login: undefined,
     created_at: new Date().toISOString(),
   }
   const updatedUsers = [...users, newUser]
@@ -643,7 +842,14 @@ export function addUser(userData: {
 
 export function updateUser(
   id: string,
-  userData: { name: string; email: string; role: string; password?: string; groups?: string[] },
+  userData: {
+    name: string
+    email: string
+    role: string
+    password?: string
+    groups?: string[]
+    link_permissions?: string[]
+  },
 ): User | null {
   const users = getUsers()
   const userIndex = users.findIndex((user) => user.id === id)
@@ -656,6 +862,7 @@ export function updateUser(
     role: userData.role as "admin" | "user",
     groups: userData.groups || users[userIndex].groups,
     group_ids: userData.groups || users[userIndex].group_ids,
+    link_permissions: userData.link_permissions || users[userIndex].link_permissions,
   }
 
   if (userData.password) {
@@ -668,6 +875,15 @@ export function updateUser(
   return updatedUser
 }
 
+export function updateUserLastLogin(email: string): void {
+  const users = getUsers()
+  const userIndex = users.findIndex((user) => user.email === email)
+  if (userIndex !== -1) {
+    users[userIndex].last_login = new Date().toISOString()
+    saveUsers(users)
+  }
+}
+
 export function deleteUser(id: string): boolean {
   const users = getUsers()
   const filteredUsers = users.filter((user) => user.id !== id)
@@ -678,7 +894,12 @@ export function deleteUser(id: string): boolean {
 
 export function authenticateUser(email: string): User | null {
   const users = getUsers()
-  return users.find((user) => user.email === email) || null
+  const user = users.find((user) => user.email === email)
+  if (user) {
+    // Atualizar último login
+    updateUserLastLogin(email)
+  }
+  return user || null
 }
 
 // Funções para Posts
@@ -890,4 +1111,17 @@ export function validatePassword(inputPassword: string, storedHash: string): boo
 
 export function createInitialHash(password: string, userId: string): string {
   return `hashed_${password}_${userId}`
+}
+
+// Função para formatar tempo relativo
+export function formatTimeAgo(dateString: string): string {
+  const now = new Date()
+  const date = new Date(dateString)
+  const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
+
+  if (diffInMinutes < 1) return "agora"
+  if (diffInMinutes < 60) return `${diffInMinutes} min atrás`
+  if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h atrás`
+  if (diffInMinutes < 10080) return `${Math.floor(diffInMinutes / 1440)} dias atrás`
+  return date.toLocaleDateString("pt-BR")
 }

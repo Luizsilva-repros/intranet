@@ -16,6 +16,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Switch } from "@/components/ui/switch"
 import {
   getUsers,
+  getGroups,
   getCategories,
   getLinks,
   getPosts,
@@ -23,6 +24,9 @@ import {
   addUser,
   updateUser,
   deleteUser,
+  addGroup,
+  updateGroup,
+  deleteGroup,
   addCategory,
   updateCategory,
   deleteCategory,
@@ -37,8 +41,9 @@ import {
   updateSettings,
   initializeData,
   savePosts,
+  formatTimeAgo,
 } from "@/lib/local-storage"
-import type { User, Category, Link as LinkType, Post, Extension, Settings } from "@/lib/local-storage"
+import type { User, Group, Category, Link as LinkType, Post, Extension, Settings } from "@/lib/local-storage"
 import {
   Users,
   FolderOpen,
@@ -55,6 +60,9 @@ import {
   EyeOff,
   Upload,
   X,
+  Shield,
+  UserCheck,
+  Clock,
 } from "lucide-react"
 
 const availableGroups = ["admin", "rh", "financeiro", "vendas", "ti", "suporte", "user"]
@@ -82,6 +90,7 @@ const categoryColors = [
 export default function AdminPage() {
   const [user, setUser] = useState<User | null>(null)
   const [users, setUsers] = useState<User[]>([])
+  const [groups, setGroups] = useState<Group[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [linksData, setLinksData] = useState<LinkType[]>([])
   const [posts, setPosts] = useState<Post[]>([])
@@ -93,6 +102,7 @@ export default function AdminPage() {
 
   // Estados para formulários
   const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [editingGroup, setEditingGroup] = useState<Group | null>(null)
   const [editingCategory, setEditingCategory] = useState<Category | null>(null)
   const [editingLink, setEditingLink] = useState<LinkType | null>(null)
   const [editingSettings, setEditingSettings] = useState<Settings | null>(null)
@@ -106,17 +116,26 @@ export default function AdminPage() {
     role: "user" as "admin" | "user",
     password: "",
     groups: [] as string[],
+    link_permissions: [] as string[],
+  })
+  const [newGroup, setNewGroup] = useState({
+    name: "",
+    description: "",
+    color: "#6b7280",
+    permissions: [] as string[],
   })
   const [newCategory, setNewCategory] = useState({
     name: "",
     description: "",
     color: "#3B82F6",
+    icon: "📁",
     groups: [] as string[],
   })
   const [newLink, setNewLink] = useState({
     name: "",
     url: "",
     description: "",
+    icon: "🔗",
     category_id: "",
     groups: [] as string[],
   })
@@ -131,6 +150,7 @@ export default function AdminPage() {
 
   // Estados para diálogos
   const [showUserDialog, setShowUserDialog] = useState(false)
+  const [showGroupDialog, setShowGroupDialog] = useState(false)
   const [showCategoryDialog, setShowCategoryDialog] = useState(false)
   const [showLinkDialog, setShowLinkDialog] = useState(false)
   const [showSettingsDialog, setShowSettingsDialog] = useState(false)
@@ -178,6 +198,7 @@ export default function AdminPage() {
 
   const loadData = () => {
     setUsers(getUsers())
+    setGroups(getGroups())
     setCategories(getCategories())
     setLinksData(getLinks())
     setPosts(getPosts())
@@ -202,6 +223,16 @@ export default function AdminPage() {
       role: "user",
       password: "",
       groups: [],
+      link_permissions: [],
+    })
+  }
+
+  const resetNewGroup = () => {
+    setNewGroup({
+      name: "",
+      description: "",
+      color: "#6b7280",
+      permissions: [],
     })
   }
 
@@ -210,6 +241,7 @@ export default function AdminPage() {
       name: "",
       description: "",
       color: "#3B82F6",
+      icon: "📁",
       groups: [],
     })
   }
@@ -219,6 +251,7 @@ export default function AdminPage() {
       name: "",
       url: "",
       description: "",
+      icon: "🔗",
       category_id: "",
       groups: [],
     })
@@ -248,6 +281,7 @@ export default function AdminPage() {
         role: newUser.role,
         password: newUser.password,
         groups: newUser.groups.length > 0 ? newUser.groups : ["user"],
+        link_permissions: newUser.link_permissions,
       })
 
       resetNewUser()
@@ -272,6 +306,7 @@ export default function AdminPage() {
         role: editingUser.role,
         password: editingUser.password,
         groups: editingUser.groups,
+        link_permissions: editingUser.link_permissions,
       })
 
       setEditingUser(null)
@@ -295,6 +330,64 @@ export default function AdminPage() {
     }
   }
 
+  const handleCreateGroup = () => {
+    if (!newGroup.name) {
+      showMessage("Nome do grupo é obrigatório")
+      return
+    }
+
+    try {
+      addGroup({
+        name: newGroup.name,
+        description: newGroup.description,
+        color: newGroup.color,
+        permissions: newGroup.permissions,
+      })
+
+      resetNewGroup()
+      setShowGroupDialog(false)
+      loadData()
+      showMessage("Grupo criado com sucesso!")
+    } catch (error) {
+      showMessage("Erro ao criar grupo")
+    }
+  }
+
+  const handleUpdateGroup = () => {
+    if (!editingGroup || !editingGroup.name) {
+      showMessage("Nome do grupo é obrigatório")
+      return
+    }
+
+    try {
+      updateGroup(editingGroup.id, {
+        name: editingGroup.name,
+        description: editingGroup.description,
+        color: editingGroup.color,
+        permissions: editingGroup.permissions,
+      })
+
+      setEditingGroup(null)
+      setShowGroupDialog(false)
+      loadData()
+      showMessage("Grupo atualizado com sucesso!")
+    } catch (error) {
+      showMessage("Erro ao atualizar grupo")
+    }
+  }
+
+  const handleDeleteGroup = (id: string) => {
+    if (confirm("Tem certeza que deseja excluir este grupo?")) {
+      try {
+        deleteGroup(id)
+        loadData()
+        showMessage("Grupo excluído com sucesso!")
+      } catch (error) {
+        showMessage("Erro ao excluir grupo")
+      }
+    }
+  }
+
   const handleCreateCategory = () => {
     if (!newCategory.name) {
       showMessage("Nome da categoria é obrigatório")
@@ -306,6 +399,7 @@ export default function AdminPage() {
         name: newCategory.name,
         description: newCategory.description,
         color: newCategory.color,
+        icon: newCategory.icon,
         groups: newCategory.groups.length > 0 ? newCategory.groups : ["admin"],
       })
 
@@ -329,6 +423,7 @@ export default function AdminPage() {
         name: editingCategory.name,
         description: editingCategory.description,
         color: editingCategory.color,
+        icon: editingCategory.icon,
         groups: editingCategory.groups,
       })
 
@@ -364,6 +459,8 @@ export default function AdminPage() {
       addLink({
         name: newLink.name,
         url: newLink.url,
+        description: newLink.description,
+        icon: newLink.icon,
         category: category?.name || "",
         groups: newLink.groups.length > 0 ? newLink.groups : ["admin"],
       })
@@ -388,6 +485,8 @@ export default function AdminPage() {
       updateLink(editingLink.id, {
         name: editingLink.name,
         url: editingLink.url,
+        description: editingLink.description,
+        icon: editingLink.icon,
         category: category?.name || "",
         groups: editingLink.groups,
       })
@@ -584,6 +683,10 @@ export default function AdminPage() {
     return groups.includes(group) ? groups.filter((g) => g !== group) : [...groups, group]
   }
 
+  const toggleLinkPermission = (permissions: string[], linkId: string) => {
+    return permissions.includes(linkId) ? permissions.filter((id) => id !== linkId) : [...permissions, linkId]
+  }
+
   // Função para redimensionar imagem
   const resizeImage = (file: File, maxWidth = 400, maxHeight = 600): Promise<string> => {
     return new Promise((resolve) => {
@@ -706,10 +809,14 @@ export default function AdminPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs defaultValue="users" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Usuários
+            </TabsTrigger>
+            <TabsTrigger value="groups" className="flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              Grupos
             </TabsTrigger>
             <TabsTrigger value="categories" className="flex items-center gap-2">
               <FolderOpen className="h-4 w-4" />
@@ -729,7 +836,7 @@ export default function AdminPage() {
             </TabsTrigger>
             <TabsTrigger value="settings" className="flex items-center gap-2">
               <SettingsIcon className="h-4 w-4" />
-              Configurações
+              Config
             </TabsTrigger>
           </TabsList>
 
@@ -758,8 +865,19 @@ export default function AdminPage() {
                         <div className="flex items-center gap-2">
                           <h3 className="font-medium">{userItem.name}</h3>
                           {userItem.role === "admin" && <Badge variant="destructive">Admin</Badge>}
+                          {userItem.active && (
+                            <Badge variant="default" className="bg-green-600">
+                              Ativo
+                            </Badge>
+                          )}
                         </div>
                         <p className="text-sm text-gray-600">{userItem.email}</p>
+                        {userItem.last_login && (
+                          <div className="flex items-center space-x-1 text-xs text-gray-500">
+                            <Clock className="h-3 w-3" />
+                            <span>Último login: {formatTimeAgo(userItem.last_login)}</span>
+                          </div>
+                        )}
                         {userItem.groups && userItem.groups.length > 0 && (
                           <div className="flex flex-wrap gap-1">
                             {userItem.groups.map((group) => (
@@ -767,6 +885,12 @@ export default function AdminPage() {
                                 {group}
                               </Badge>
                             ))}
+                          </div>
+                        )}
+                        {userItem.link_permissions && userItem.link_permissions.length > 0 && (
+                          <div className="flex items-center space-x-1 text-xs text-blue-600">
+                            <UserCheck className="h-3 w-3" />
+                            <span>{userItem.link_permissions.length} links específicos</span>
                           </div>
                         )}
                       </div>
@@ -782,6 +906,65 @@ export default function AdminPage() {
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button variant="outline" size="sm" onClick={() => handleDeleteUser(userItem.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+
+          {/* Grupos */}
+          <TabsContent value="groups" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold">Gerenciar Grupos de Acesso</h2>
+              <Button
+                onClick={() => {
+                  setEditingGroup(null)
+                  resetNewGroup()
+                  setShowGroupDialog(true)
+                }}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Novo Grupo
+              </Button>
+            </div>
+
+            <div className="grid gap-4">
+              {groups.map((group) => (
+                <Card key={group.id}>
+                  <CardContent className="p-4">
+                    <div className="flex justify-between items-start">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 rounded-full" style={{ backgroundColor: group.color }} />
+                          <h3 className="font-medium">{group.name}</h3>
+                        </div>
+                        {group.description && <p className="text-sm text-gray-600">{group.description}</p>}
+                        {group.permissions && group.permissions.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {group.permissions.map((permission) => (
+                              <Badge key={permission} variant="secondary" className="text-xs">
+                                {permission}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setEditingGroup(group)
+                            setShowGroupDialog(true)
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => handleDeleteGroup(group.id)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -816,6 +999,7 @@ export default function AdminPage() {
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
                           <div className="w-4 h-4 rounded-full" style={{ backgroundColor: category.color }} />
+                          <span className="text-lg">{category.icon}</span>
                           <h3 className="font-medium">{category.name}</h3>
                         </div>
                         {category.description && <p className="text-sm text-gray-600">{category.description}</p>}
@@ -876,6 +1060,7 @@ export default function AdminPage() {
                       <div className="flex justify-between items-start">
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
+                            <span className="text-lg">{link.icon}</span>
                             <h3 className="font-medium">{link.name}</h3>
                             {category && (
                               <Badge style={{ backgroundColor: category.color, color: "white" }}>{category.name}</Badge>
@@ -1094,18 +1279,15 @@ export default function AdminPage() {
                       <h3 className="font-medium">Cores do Sistema</h3>
                       <div className="flex gap-4 mt-2">
                         <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded border" style={{ backgroundColor: settings.primary_color }} />
+                          <div className="w-6 h-6 rounded" style={{ backgroundColor: settings.primary_color }} />
                           <span className="text-sm">Primária</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <div
-                            className="w-6 h-6 rounded border"
-                            style={{ backgroundColor: settings.secondary_color }}
-                          />
+                          <div className="w-6 h-6 rounded" style={{ backgroundColor: settings.secondary_color }} />
                           <span className="text-sm">Secundária</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded border" style={{ backgroundColor: settings.accent_color }} />
+                          <div className="w-6 h-6 rounded" style={{ backgroundColor: settings.accent_color }} />
                           <span className="text-sm">Destaque</span>
                         </div>
                       </div>
@@ -1116,72 +1298,55 @@ export default function AdminPage() {
             )}
           </TabsContent>
         </Tabs>
+      </main>
 
-        {/* Dialog para Usuários */}
-        <Dialog open={showUserDialog} onOpenChange={setShowUserDialog}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>{editingUser ? "Editar Usuário" : "Novo Usuário"}</DialogTitle>
-              <DialogDescription>
-                {editingUser ? "Edite as informações do usuário" : "Adicione um novo usuário ao sistema"}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
+      {/* Dialog para Usuários */}
+      <Dialog open={showUserDialog} onOpenChange={setShowUserDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingUser ? "Editar Usuário" : "Novo Usuário"}</DialogTitle>
+            <DialogDescription>
+              {editingUser ? "Edite as informações do usuário" : "Preencha os dados do novo usuário"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="user-name">Nome</Label>
+                <Label htmlFor="name">Nome *</Label>
                 <Input
-                  id="user-name"
+                  id="name"
                   value={editingUser ? editingUser.name : newUser.name}
-                  onChange={(e) => {
-                    if (editingUser) {
-                      setEditingUser({ ...editingUser, name: e.target.value })
-                    } else {
-                      setNewUser({ ...newUser, name: e.target.value })
-                    }
-                  }}
+                  onChange={(e) =>
+                    editingUser
+                      ? setEditingUser({ ...editingUser, name: e.target.value })
+                      : setNewUser({ ...newUser, name: e.target.value })
+                  }
                 />
               </div>
               <div>
-                <Label htmlFor="user-email">Email</Label>
+                <Label htmlFor="email">Email *</Label>
                 <Input
-                  id="user-email"
+                  id="email"
                   type="email"
                   value={editingUser ? editingUser.email : newUser.email}
-                  onChange={(e) => {
-                    if (editingUser) {
-                      setEditingUser({ ...editingUser, email: e.target.value })
-                    } else {
-                      setNewUser({ ...newUser, email: e.target.value })
-                    }
-                  }}
+                  onChange={(e) =>
+                    editingUser
+                      ? setEditingUser({ ...editingUser, email: e.target.value })
+                      : setNewUser({ ...newUser, email: e.target.value })
+                  }
                 />
               </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="user-password">Senha</Label>
-                <Input
-                  id="user-password"
-                  type="password"
-                  value={editingUser ? editingUser.password || "" : newUser.password}
-                  onChange={(e) => {
-                    if (editingUser) {
-                      setEditingUser({ ...editingUser, password: e.target.value })
-                    } else {
-                      setNewUser({ ...newUser, password: e.target.value })
-                    }
-                  }}
-                />
-              </div>
-              <div>
-                <Label htmlFor="user-role">Função</Label>
+                <Label htmlFor="role">Função</Label>
                 <Select
                   value={editingUser ? editingUser.role : newUser.role}
-                  onValueChange={(value: "admin" | "user") => {
-                    if (editingUser) {
-                      setEditingUser({ ...editingUser, role: value })
-                    } else {
-                      setNewUser({ ...newUser, role: value })
-                    }
-                  }}
+                  onValueChange={(value: "admin" | "user") =>
+                    editingUser
+                      ? setEditingUser({ ...editingUser, role: value })
+                      : setNewUser({ ...newUser, role: value })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -1193,590 +1358,711 @@ export default function AdminPage() {
                 </Select>
               </div>
               <div>
-                <Label>Grupos</Label>
-                <div className="grid grid-cols-2 gap-2 mt-2">
-                  {availableGroups.map((group) => (
-                    <div key={group} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`user-group-${group}`}
-                        checked={
-                          editingUser ? editingUser.groups?.includes(group) || false : newUser.groups.includes(group)
-                        }
-                        onCheckedChange={() => {
-                          if (editingUser) {
-                            const currentGroups = editingUser.groups || []
-                            const newGroups = toggleGroupSelection(currentGroups, group)
-                            setEditingUser({ ...editingUser, groups: newGroups })
-                          } else {
-                            const newGroups = toggleGroupSelection(newUser.groups, group)
-                            setNewUser({ ...newUser, groups: newGroups })
-                          }
-                        }}
-                      />
-                      <Label htmlFor={`user-group-${group}`} className="text-sm capitalize">
-                        {group}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setShowUserDialog(false)}>
-                  Cancelar
-                </Button>
-                <Button onClick={editingUser ? handleUpdateUser : handleCreateUser}>
-                  {editingUser ? "Salvar" : "Criar"}
-                </Button>
+                <Label htmlFor="password">Senha {!editingUser && "*"}</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder={editingUser ? "Deixe em branco para manter" : "Digite a senha"}
+                  value={editingUser ? editingUser.password || "" : newUser.password}
+                  onChange={(e) =>
+                    editingUser
+                      ? setEditingUser({ ...editingUser, password: e.target.value })
+                      : setNewUser({ ...newUser, password: e.target.value })
+                  }
+                />
               </div>
             </div>
-          </DialogContent>
-        </Dialog>
 
-        {/* Dialog para Categorias */}
-        <Dialog open={showCategoryDialog} onOpenChange={setShowCategoryDialog}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>{editingCategory ? "Editar Categoria" : "Nova Categoria"}</DialogTitle>
-              <DialogDescription>
-                {editingCategory ? "Edite as informações da categoria" : "Adicione uma nova categoria"}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="category-name">Nome</Label>
-                <Input
-                  id="category-name"
-                  value={editingCategory ? editingCategory.name : newCategory.name}
-                  onChange={(e) => {
-                    if (editingCategory) {
-                      setEditingCategory({ ...editingCategory, name: e.target.value })
-                    } else {
-                      setNewCategory({ ...newCategory, name: e.target.value })
-                    }
-                  }}
-                />
-              </div>
-              <div>
-                <Label htmlFor="category-description">Descrição</Label>
-                <Textarea
-                  id="category-description"
-                  value={editingCategory ? editingCategory.description : newCategory.description}
-                  onChange={(e) => {
-                    if (editingCategory) {
-                      setEditingCategory({ ...editingCategory, description: e.target.value })
-                    } else {
-                      setNewCategory({ ...newCategory, description: e.target.value })
-                    }
-                  }}
-                />
-              </div>
-              <div>
-                <Label>Cor</Label>
-                <div className="grid grid-cols-6 gap-2 mt-2">
-                  {categoryColors.map((color) => (
-                    <button
-                      key={color}
-                      type="button"
-                      className={`w-8 h-8 rounded-full border-2 ${
-                        (editingCategory ? editingCategory.color : newCategory.color) === color
-                          ? "border-gray-900"
-                          : "border-gray-300"
-                      }`}
-                      style={{ backgroundColor: color }}
-                      onClick={() => {
-                        if (editingCategory) {
-                          setEditingCategory({ ...editingCategory, color })
+            <div>
+              <Label>Grupos de Acesso</Label>
+              <div className="grid grid-cols-3 gap-2 mt-2">
+                {availableGroups.map((group) => (
+                  <div key={group} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`group-${group}`}
+                      checked={
+                        editingUser ? editingUser.groups?.includes(group) || false : newUser.groups.includes(group)
+                      }
+                      onCheckedChange={(checked) => {
+                        if (editingUser) {
+                          const newGroups = checked
+                            ? [...(editingUser.groups || []), group]
+                            : (editingUser.groups || []).filter((g) => g !== group)
+                          setEditingUser({ ...editingUser, groups: newGroups })
                         } else {
-                          setNewCategory({ ...newCategory, color })
+                          setNewUser({
+                            ...newUser,
+                            groups: toggleGroupSelection(newUser.groups, group),
+                          })
                         }
                       }}
                     />
-                  ))}
-                </div>
-              </div>
-              <div>
-                <Label>Grupos com Acesso</Label>
-                <div className="grid grid-cols-2 gap-2 mt-2">
-                  {availableGroups.map((group) => (
-                    <div key={group} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`cat-group-${group}`}
-                        checked={
-                          editingCategory
-                            ? editingCategory.groups?.includes(group) || false
-                            : newCategory.groups.includes(group)
-                        }
-                        onCheckedChange={() => {
-                          if (editingCategory) {
-                            const currentGroups = editingCategory.groups || []
-                            const newGroups = toggleGroupSelection(currentGroups, group)
-                            setEditingCategory({ ...editingCategory, groups: newGroups })
-                          } else {
-                            const newGroups = toggleGroupSelection(newCategory.groups, group)
-                            setNewCategory({ ...newCategory, groups: newGroups })
-                          }
-                        }}
-                      />
-                      <Label htmlFor={`cat-group-${group}`} className="text-sm capitalize">
-                        {group}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setShowCategoryDialog(false)}>
-                  Cancelar
-                </Button>
-                <Button onClick={editingCategory ? handleUpdateCategory : handleCreateCategory}>
-                  {editingCategory ? "Salvar" : "Criar"}
-                </Button>
+                    <Label htmlFor={`group-${group}`} className="text-sm capitalize">
+                      {group}
+                    </Label>
+                  </div>
+                ))}
               </div>
             </div>
-          </DialogContent>
-        </Dialog>
 
-        {/* Dialog para Links */}
-        <Dialog open={showLinkDialog} onOpenChange={setShowLinkDialog}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>{editingLink ? "Editar Link" : "Novo Link"}</DialogTitle>
-              <DialogDescription>
-                {editingLink ? "Edite as informações do link" : "Adicione um novo link"}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
+            <div>
+              <Label>Permissões Específicas de Links</Label>
+              <p className="text-xs text-gray-500 mb-2">
+                Se selecionado, o usuário terá acesso apenas aos links específicos marcados abaixo (ignora grupos)
+              </p>
+              <div className="max-h-40 overflow-y-auto border rounded p-2 space-y-2">
+                {linksData.map((link) => (
+                  <div key={link.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`link-${link.id}`}
+                      checked={
+                        editingUser
+                          ? editingUser.link_permissions?.includes(link.id) || false
+                          : newUser.link_permissions.includes(link.id)
+                      }
+                      onCheckedChange={(checked) => {
+                        if (editingUser) {
+                          const newPermissions = checked
+                            ? [...(editingUser.link_permissions || []), link.id]
+                            : (editingUser.link_permissions || []).filter((id) => id !== link.id)
+                          setEditingUser({ ...editingUser, link_permissions: newPermissions })
+                        } else {
+                          setNewUser({
+                            ...newUser,
+                            link_permissions: toggleLinkPermission(newUser.link_permissions, link.id),
+                          })
+                        }
+                      }}
+                    />
+                    <Label htmlFor={`link-${link.id}`} className="text-sm">
+                      {link.icon} {link.name}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowUserDialog(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={editingUser ? handleUpdateUser : handleCreateUser}>
+                {editingUser ? "Atualizar" : "Criar"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog para Grupos */}
+      <Dialog open={showGroupDialog} onOpenChange={setShowGroupDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingGroup ? "Editar Grupo" : "Novo Grupo"}</DialogTitle>
+            <DialogDescription>
+              {editingGroup ? "Edite as informações do grupo" : "Preencha os dados do novo grupo"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="group-name">Nome *</Label>
+              <Input
+                id="group-name"
+                value={editingGroup ? editingGroup.name : newGroup.name}
+                onChange={(e) =>
+                  editingGroup
+                    ? setEditingGroup({ ...editingGroup, name: e.target.value })
+                    : setNewGroup({ ...newGroup, name: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="group-description">Descrição</Label>
+              <Textarea
+                id="group-description"
+                value={editingGroup ? editingGroup.description : newGroup.description}
+                onChange={(e) =>
+                  editingGroup
+                    ? setEditingGroup({ ...editingGroup, description: e.target.value })
+                    : setNewGroup({ ...newGroup, description: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="group-color">Cor</Label>
+              <div className="flex gap-2 mt-2">
+                {categoryColors.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    className={`w-8 h-8 rounded border-2 ${
+                      (editingGroup ? editingGroup.color : newGroup.color) === color
+                        ? "border-gray-900"
+                        : "border-gray-300"
+                    }`}
+                    style={{ backgroundColor: color }}
+                    onClick={() =>
+                      editingGroup ? setEditingGroup({ ...editingGroup, color }) : setNewGroup({ ...newGroup, color })
+                    }
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowGroupDialog(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={editingGroup ? handleUpdateGroup : handleCreateGroup}>
+                {editingGroup ? "Atualizar" : "Criar"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog para Categorias */}
+      <Dialog open={showCategoryDialog} onOpenChange={setShowCategoryDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingCategory ? "Editar Categoria" : "Nova Categoria"}</DialogTitle>
+            <DialogDescription>
+              {editingCategory ? "Edite as informações da categoria" : "Preencha os dados da nova categoria"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="link-name">Nome</Label>
+                <Label htmlFor="category-name">Nome *</Label>
+                <Input
+                  id="category-name"
+                  value={editingCategory ? editingCategory.name : newCategory.name}
+                  onChange={(e) =>
+                    editingCategory
+                      ? setEditingCategory({ ...editingCategory, name: e.target.value })
+                      : setNewCategory({ ...newCategory, name: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <Label htmlFor="category-icon">Ícone</Label>
+                <Input
+                  id="category-icon"
+                  value={editingCategory ? editingCategory.icon : newCategory.icon}
+                  onChange={(e) =>
+                    editingCategory
+                      ? setEditingCategory({ ...editingCategory, icon: e.target.value })
+                      : setNewCategory({ ...newCategory, icon: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="category-description">Descrição</Label>
+              <Textarea
+                id="category-description"
+                value={editingCategory ? editingCategory.description : newCategory.description}
+                onChange={(e) =>
+                  editingCategory
+                    ? setEditingCategory({ ...editingCategory, description: e.target.value })
+                    : setNewCategory({ ...newCategory, description: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="category-color">Cor</Label>
+              <div className="flex gap-2 mt-2">
+                {categoryColors.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    className={`w-8 h-8 rounded border-2 ${
+                      (editingCategory ? editingCategory.color : newCategory.color) === color
+                        ? "border-gray-900"
+                        : "border-gray-300"
+                    }`}
+                    style={{ backgroundColor: color }}
+                    onClick={() =>
+                      editingCategory
+                        ? setEditingCategory({ ...editingCategory, color })
+                        : setNewCategory({ ...newCategory, color })
+                    }
+                  />
+                ))}
+              </div>
+            </div>
+            <div>
+              <Label>Grupos com Acesso</Label>
+              <div className="grid grid-cols-3 gap-2 mt-2">
+                {availableGroups.map((group) => (
+                  <div key={group} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`category-group-${group}`}
+                      checked={
+                        editingCategory
+                          ? editingCategory.groups?.includes(group) || false
+                          : newCategory.groups.includes(group)
+                      }
+                      onCheckedChange={(checked) => {
+                        if (editingCategory) {
+                          const newGroups = checked
+                            ? [...(editingCategory.groups || []), group]
+                            : (editingCategory.groups || []).filter((g) => g !== group)
+                          setEditingCategory({ ...editingCategory, groups: newGroups })
+                        } else {
+                          setNewCategory({
+                            ...newCategory,
+                            groups: toggleGroupSelection(newCategory.groups, group),
+                          })
+                        }
+                      }}
+                    />
+                    <Label htmlFor={`category-group-${group}`} className="text-sm capitalize">
+                      {group}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowCategoryDialog(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={editingCategory ? handleUpdateCategory : handleCreateCategory}>
+                {editingCategory ? "Atualizar" : "Criar"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog para Links */}
+      <Dialog open={showLinkDialog} onOpenChange={setShowLinkDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingLink ? "Editar Link" : "Novo Link"}</DialogTitle>
+            <DialogDescription>
+              {editingLink ? "Edite as informações do link" : "Preencha os dados do novo link"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="link-name">Nome *</Label>
                 <Input
                   id="link-name"
                   value={editingLink ? editingLink.name : newLink.name}
-                  onChange={(e) => {
-                    if (editingLink) {
-                      setEditingLink({ ...editingLink, name: e.target.value })
-                    } else {
-                      setNewLink({ ...newLink, name: e.target.value })
-                    }
-                  }}
+                  onChange={(e) =>
+                    editingLink
+                      ? setEditingLink({ ...editingLink, name: e.target.value })
+                      : setNewLink({ ...newLink, name: e.target.value })
+                  }
                 />
               </div>
               <div>
-                <Label htmlFor="link-url">URL</Label>
+                <Label htmlFor="link-icon">Ícone</Label>
                 <Input
-                  id="link-url"
-                  type="url"
-                  value={editingLink ? editingLink.url : newLink.url}
-                  onChange={(e) => {
-                    if (editingLink) {
-                      setEditingLink({ ...editingLink, url: e.target.value })
-                    } else {
-                      setNewLink({ ...newLink, url: e.target.value })
-                    }
-                  }}
+                  id="link-icon"
+                  value={editingLink ? editingLink.icon : newLink.icon}
+                  onChange={(e) =>
+                    editingLink
+                      ? setEditingLink({ ...editingLink, icon: e.target.value })
+                      : setNewLink({ ...newLink, icon: e.target.value })
+                  }
                 />
               </div>
-              <div>
-                <Label htmlFor="link-description">Descrição</Label>
-                <Textarea
-                  id="link-description"
-                  value={editingLink ? editingLink.description || "" : newLink.description}
-                  onChange={(e) => {
-                    if (editingLink) {
-                      setEditingLink({ ...editingLink, description: e.target.value })
-                    } else {
-                      setNewLink({ ...newLink, description: e.target.value })
-                    }
-                  }}
-                />
+            </div>
+            <div>
+              <Label htmlFor="link-url">URL *</Label>
+              <Input
+                id="link-url"
+                type="url"
+                value={editingLink ? editingLink.url : newLink.url}
+                onChange={(e) =>
+                  editingLink
+                    ? setEditingLink({ ...editingLink, url: e.target.value })
+                    : setNewLink({ ...newLink, url: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="link-description">Descrição</Label>
+              <Textarea
+                id="link-description"
+                value={editingLink ? editingLink.description : newLink.description}
+                onChange={(e) =>
+                  editingLink
+                    ? setEditingLink({ ...editingLink, description: e.target.value })
+                    : setNewLink({ ...newLink, description: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="link-category">Categoria</Label>
+              <Select
+                value={editingLink ? editingLink.category_id : newLink.category_id}
+                onValueChange={(value) =>
+                  editingLink
+                    ? setEditingLink({ ...editingLink, category_id: value })
+                    : setNewLink({ ...newLink, category_id: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.icon} {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Grupos com Acesso</Label>
+              <div className="grid grid-cols-3 gap-2 mt-2">
+                {availableGroups.map((group) => (
+                  <div key={group} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`link-group-${group}`}
+                      checked={
+                        editingLink ? editingLink.groups?.includes(group) || false : newLink.groups.includes(group)
+                      }
+                      onCheckedChange={(checked) => {
+                        if (editingLink) {
+                          const newGroups = checked
+                            ? [...(editingLink.groups || []), group]
+                            : (editingLink.groups || []).filter((g) => g !== group)
+                          setEditingLink({ ...editingLink, groups: newGroups })
+                        } else {
+                          setNewLink({
+                            ...newLink,
+                            groups: toggleGroupSelection(newLink.groups, group),
+                          })
+                        }
+                      }}
+                    />
+                    <Label htmlFor={`link-group-${group}`} className="text-sm capitalize">
+                      {group}
+                    </Label>
+                  </div>
+                ))}
               </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowLinkDialog(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={editingLink ? handleUpdateLink : handleCreateLink}>
+                {editingLink ? "Atualizar" : "Criar"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog para Posts */}
+      <Dialog open={showPostDialog} onOpenChange={setShowPostDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Publicação</DialogTitle>
+            <DialogDescription>Edite as informações da publicação</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="post-title">Título *</Label>
+              <Input
+                id="post-title"
+                value={editPostForm.title}
+                onChange={(e) => setEditPostForm({ ...editPostForm, title: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="post-content">Conteúdo *</Label>
+              <Textarea
+                id="post-content"
+                rows={6}
+                value={editPostForm.content}
+                onChange={(e) => setEditPostForm({ ...editPostForm, content: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="link-category">Categoria</Label>
+                <Label htmlFor="post-type">Tipo</Label>
                 <Select
-                  value={editingLink ? editingLink.category_id : newLink.category_id}
-                  onValueChange={(value) => {
-                    if (editingLink) {
-                      setEditingLink({ ...editingLink, category_id: value })
-                    } else {
-                      setNewLink({ ...newLink, category_id: value })
-                    }
-                  }}
+                  value={editPostForm.type}
+                  onValueChange={(value: Post["type"]) => setEditPostForm({ ...editPostForm, type: value })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione uma categoria" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="general">Geral</SelectItem>
+                    <SelectItem value="news">Notícia</SelectItem>
+                    <SelectItem value="event">Evento</SelectItem>
+                    <SelectItem value="announcement">Comunicado</SelectItem>
+                    <SelectItem value="birthday">Aniversário</SelectItem>
+                    <SelectItem value="departure">Desligamento</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label>Grupos com Acesso</Label>
-                <div className="grid grid-cols-2 gap-2 mt-2">
-                  {availableGroups.map((group) => (
-                    <div key={group} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`link-group-${group}`}
-                        checked={
-                          editingLink ? editingLink.groups?.includes(group) || false : newLink.groups.includes(group)
-                        }
-                        onCheckedChange={() => {
-                          if (editingLink) {
-                            const currentGroups = editingLink.groups || []
-                            const newGroups = toggleGroupSelection(currentGroups, group)
-                            setEditingLink({ ...editingLink, groups: newGroups })
-                          } else {
-                            const newGroups = toggleGroupSelection(newLink.groups, group)
-                            setNewLink({ ...newLink, groups: newGroups })
-                          }
-                        }}
-                      />
-                      <Label htmlFor={`link-group-${group}`} className="text-sm capitalize">
-                        {group}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setShowLinkDialog(false)}>
-                  Cancelar
-                </Button>
-                <Button onClick={editingLink ? handleUpdateLink : handleCreateLink}>
-                  {editingLink ? "Salvar" : "Criar"}
-                </Button>
+                <Label htmlFor="post-priority">Prioridade</Label>
+                <Select
+                  value={editPostForm.priority}
+                  onValueChange={(value: Post["priority"]) => setEditPostForm({ ...editPostForm, priority: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Baixa</SelectItem>
+                    <SelectItem value="medium">Média</SelectItem>
+                    <SelectItem value="high">Alta</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Dialog para Extensions */}
-        <Dialog open={showExtensionDialog} onOpenChange={setShowExtensionDialog}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>{editingExtension ? "Editar Ramal" : "Novo Ramal"}</DialogTitle>
-              <DialogDescription>
-                {editingExtension ? "Edite as informações do ramal" : "Adicione um novo ramal"}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="ext-name">Nome</Label>
-                <Input
-                  id="ext-name"
-                  value={editingExtension ? editingExtension.name : newExtension.name}
-                  onChange={(e) => {
-                    if (editingExtension) {
-                      setEditingExtension({ ...editingExtension, name: e.target.value })
-                    } else {
-                      setNewExtension({ ...newExtension, name: e.target.value })
-                    }
-                  }}
-                />
-              </div>
-              <div>
-                <Label htmlFor="ext-extension">Ramal</Label>
-                <Input
-                  id="ext-extension"
-                  value={editingExtension ? editingExtension.extension : newExtension.extension}
-                  onChange={(e) => {
-                    if (editingExtension) {
-                      setEditingExtension({ ...editingExtension, extension: e.target.value })
-                    } else {
-                      setNewExtension({ ...newExtension, extension: e.target.value })
-                    }
-                  }}
-                />
-              </div>
-              <div>
-                <Label htmlFor="ext-department">Departamento</Label>
-                <Input
-                  id="ext-department"
-                  value={editingExtension ? editingExtension.department : newExtension.department}
-                  onChange={(e) => {
-                    if (editingExtension) {
-                      setEditingExtension({ ...editingExtension, department: e.target.value })
-                    } else {
-                      setNewExtension({ ...newExtension, department: e.target.value })
-                    }
-                  }}
-                />
-              </div>
-              <div>
-                <Label htmlFor="ext-position">Cargo (opcional)</Label>
-                <Input
-                  id="ext-position"
-                  value={editingExtension ? editingExtension.position || "" : newExtension.position}
-                  onChange={(e) => {
-                    if (editingExtension) {
-                      setEditingExtension({ ...editingExtension, position: e.target.value })
-                    } else {
-                      setNewExtension({ ...newExtension, position: e.target.value })
-                    }
-                  }}
-                />
-              </div>
-              <div>
-                <Label htmlFor="ext-email">Email (opcional)</Label>
-                <Input
-                  id="ext-email"
-                  type="email"
-                  value={editingExtension ? editingExtension.email || "" : newExtension.email}
-                  onChange={(e) => {
-                    if (editingExtension) {
-                      setEditingExtension({ ...editingExtension, email: e.target.value })
-                    } else {
-                      setNewExtension({ ...newExtension, email: e.target.value })
-                    }
-                  }}
-                />
-              </div>
-              <div>
-                <Label htmlFor="ext-mobile">Celular (opcional)</Label>
-                <Input
-                  id="ext-mobile"
-                  value={editingExtension ? editingExtension.mobile || "" : newExtension.mobile}
-                  onChange={(e) => {
-                    if (editingExtension) {
-                      setEditingExtension({ ...editingExtension, mobile: e.target.value })
-                    } else {
-                      setNewExtension({ ...newExtension, mobile: e.target.value })
-                    }
-                  }}
-                />
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setShowExtensionDialog(false)}>
-                  Cancelar
-                </Button>
-                <Button onClick={editingExtension ? handleUpdateExtension : handleCreateExtension}>
-                  {editingExtension ? "Salvar" : "Criar"}
-                </Button>
-              </div>
+            <div>
+              <Label htmlFor="post-expires">Data de Expiração (opcional)</Label>
+              <Input
+                id="post-expires"
+                type="date"
+                value={editPostForm.expires_at ? editPostForm.expires_at.split("T")[0] : ""}
+                onChange={(e) =>
+                  setEditPostForm({
+                    ...editPostForm,
+                    expires_at: e.target.value ? new Date(e.target.value).toISOString() : "",
+                  })
+                }
+              />
             </div>
-          </DialogContent>
-        </Dialog>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="post-published"
+                checked={editPostForm.published}
+                onCheckedChange={(checked) => setEditPostForm({ ...editPostForm, published: checked })}
+              />
+              <Label htmlFor="post-published">Publicado</Label>
+            </div>
 
-        {/* Dialog para Configurações */}
-        <Dialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Configurações do Sistema</DialogTitle>
-              <DialogDescription>Configure as informações gerais do sistema</DialogDescription>
-            </DialogHeader>
-            {editingSettings && (
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="company-name">Nome da Empresa</Label>
-                  <Input
-                    id="company-name"
-                    value={editingSettings.company_name}
-                    onChange={(e) => setEditingSettings({ ...editingSettings, company_name: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="logo-url">URL do Logo</Label>
-                  <Input
-                    id="logo-url"
-                    type="url"
-                    value={editingSettings.logo_url || ""}
-                    onChange={(e) => setEditingSettings({ ...editingSettings, logo_url: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label>Cor Primária</Label>
-                  <div className="grid grid-cols-6 gap-2 mt-2">
-                    {categoryColors.map((color) => (
-                      <button
-                        key={color}
-                        type="button"
-                        className={`w-8 h-8 rounded-full border-2 ${
-                          editingSettings.primary_color === color ? "border-gray-900" : "border-gray-300"
-                        }`}
-                        style={{ backgroundColor: color }}
-                        onClick={() => setEditingSettings({ ...editingSettings, primary_color: color })}
-                      />
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <Label>Cor Secundária</Label>
-                  <div className="grid grid-cols-6 gap-2 mt-2">
-                    {categoryColors.map((color) => (
-                      <button
-                        key={color}
-                        type="button"
-                        className={`w-8 h-8 rounded-full border-2 ${
-                          editingSettings.secondary_color === color ? "border-gray-900" : "border-gray-300"
-                        }`}
-                        style={{ backgroundColor: color }}
-                        onClick={() => setEditingSettings({ ...editingSettings, secondary_color: color })}
-                      />
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <Label>Cor de Destaque</Label>
-                  <div className="grid grid-cols-6 gap-2 mt-2">
-                    {categoryColors.map((color) => (
-                      <button
-                        key={color}
-                        type="button"
-                        className={`w-8 h-8 rounded-full border-2 ${
-                          editingSettings.accent_color === color ? "border-gray-900" : "border-gray-300"
-                        }`}
-                        style={{ backgroundColor: color }}
-                        onClick={() => setEditingSettings({ ...editingSettings, accent_color: color })}
-                      />
-                    ))}
-                  </div>
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setShowSettingsDialog(false)}>
-                    Cancelar
+            {/* Upload de Imagem */}
+            <div>
+              <Label>Imagem (opcional)</Label>
+              <div className="mt-2">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleFileSelect(e.target.files?.[0] || null)}
+                  className="hidden"
+                  id="image-upload"
+                />
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => document.getElementById("image-upload")?.click()}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Selecionar Imagem
                   </Button>
-                  <Button onClick={handleUpdateSettings}>Salvar</Button>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
-
-        {/* Dialog para editar post */}
-        <Dialog open={showPostDialog} onOpenChange={setShowPostDialog}>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>Editar Post</DialogTitle>
-              <DialogDescription>Faça as alterações necessárias na publicação.</DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="edit-title">Título</Label>
-                <Input
-                  id="edit-title"
-                  value={editPostForm.title}
-                  onChange={(e) => setEditPostForm({ ...editPostForm, title: e.target.value })}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="edit-type">Tipo</Label>
-                  <Select
-                    value={editPostForm.type}
-                    onValueChange={(value: Post["type"]) => setEditPostForm({ ...editPostForm, type: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="general">🔹 Geral</SelectItem>
-                      <SelectItem value="announcement">📢 Comunicado</SelectItem>
-                      <SelectItem value="event">🎉 Evento</SelectItem>
-                      <SelectItem value="birthday">🎂 Aniversário</SelectItem>
-                      <SelectItem value="departure">👋 Desligamento</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="edit-priority">Prioridade</Label>
-                  <Select
-                    value={editPostForm.priority}
-                    onValueChange={(value: Post["priority"]) => setEditPostForm({ ...editPostForm, priority: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">🟢 Baixa</SelectItem>
-                      <SelectItem value="medium">🟡 Média</SelectItem>
-                      <SelectItem value="high">🔴 Alta</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="edit-expires">Data de Expiração</Label>
-                <Input
-                  id="edit-expires"
-                  type="datetime-local"
-                  value={editPostForm.expires_at}
-                  onChange={(e) => setEditPostForm({ ...editPostForm, expires_at: e.target.value })}
-                />
-              </div>
-
-              {/* Upload de Imagem no Dialog de Edição */}
-              <div className="grid gap-2">
-                <Label>Imagem (opcional)</Label>
-                <div className="mt-2">
-                  {!editImagePreview ? (
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors">
-                      <Upload className="mx-auto h-8 w-8 text-gray-400" />
-                      <div className="mt-2">
-                        <label htmlFor="edit-file-upload" className="cursor-pointer">
-                          <span className="text-sm font-medium text-gray-900">Clique para fazer upload</span>
-                          <span className="block text-xs text-gray-500">PNG, JPG, GIF até 5MB</span>
-                        </label>
-                        <input
-                          id="edit-file-upload"
-                          name="edit-file-upload"
-                          type="file"
-                          className="sr-only"
-                          accept="image/*"
-                          onChange={(e) => handleFileSelect(e.target.files?.[0] || null)}
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="relative">
-                      <img
-                        src={editImagePreview || "/placeholder.svg"}
-                        alt="Preview"
-                        className="w-full max-w-sm h-auto rounded-lg border shadow-sm"
-                      />
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        className="absolute top-2 right-2"
-                        onClick={() => removeImage()}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
+                  {editImagePreview && (
+                    <Button type="button" variant="outline" onClick={removeImage}>
+                      <X className="h-4 w-4 mr-2" />
+                      Remover
+                    </Button>
                   )}
                 </div>
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="edit-content">Conteúdo</Label>
-                <Textarea
-                  id="edit-content"
-                  value={editPostForm.content}
-                  onChange={(e) => setEditPostForm({ ...editPostForm, content: e.target.value })}
-                  rows={6}
-                />
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="edit-published"
-                  checked={editPostForm.published}
-                  onCheckedChange={(checked) => setEditPostForm({ ...editPostForm, published: checked })}
-                />
-                <Label htmlFor="edit-published">Publicado</Label>
+                {editImagePreview && (
+                  <div className="mt-4">
+                    <img
+                      src={editImagePreview || "/placeholder.svg"}
+                      alt="Preview"
+                      className="max-w-xs max-h-48 object-contain rounded border shadow-sm"
+                    />
+                  </div>
+                )}
               </div>
             </div>
-            <div className="flex justify-end space-x-2">
+
+            <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setShowPostDialog(false)}>
                 Cancelar
               </Button>
-              <Button onClick={handleUpdatePost}>Salvar Alterações</Button>
+              <Button onClick={handleUpdatePost}>Atualizar</Button>
             </div>
-          </DialogContent>
-        </Dialog>
-      </main>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog para Ramais */}
+      <Dialog open={showExtensionDialog} onOpenChange={setShowExtensionDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingExtension ? "Editar Ramal" : "Novo Ramal"}</DialogTitle>
+            <DialogDescription>
+              {editingExtension ? "Edite as informações do ramal" : "Preencha os dados do novo ramal"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="ext-name">Nome *</Label>
+                <Input
+                  id="ext-name"
+                  value={editingExtension ? editingExtension.name : newExtension.name}
+                  onChange={(e) =>
+                    editingExtension
+                      ? setEditingExtension({ ...editingExtension, name: e.target.value })
+                      : setNewExtension({ ...newExtension, name: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <Label htmlFor="ext-extension">Ramal *</Label>
+                <Input
+                  id="ext-extension"
+                  value={editingExtension ? editingExtension.extension : newExtension.extension}
+                  onChange={(e) =>
+                    editingExtension
+                      ? setEditingExtension({ ...editingExtension, extension: e.target.value })
+                      : setNewExtension({ ...newExtension, extension: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="ext-department">Departamento *</Label>
+                <Input
+                  id="ext-department"
+                  value={editingExtension ? editingExtension.department : newExtension.department}
+                  onChange={(e) =>
+                    editingExtension
+                      ? setEditingExtension({ ...editingExtension, department: e.target.value })
+                      : setNewExtension({ ...newExtension, department: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <Label htmlFor="ext-position">Cargo</Label>
+                <Input
+                  id="ext-position"
+                  value={editingExtension ? editingExtension.position : newExtension.position}
+                  onChange={(e) =>
+                    editingExtension
+                      ? setEditingExtension({ ...editingExtension, position: e.target.value })
+                      : setNewExtension({ ...newExtension, position: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="ext-email">Email</Label>
+                <Input
+                  id="ext-email"
+                  type="email"
+                  value={editingExtension ? editingExtension.email : newExtension.email}
+                  onChange={(e) =>
+                    editingExtension
+                      ? setEditingExtension({ ...editingExtension, email: e.target.value })
+                      : setNewExtension({ ...newExtension, email: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <Label htmlFor="ext-mobile">Celular</Label>
+                <Input
+                  id="ext-mobile"
+                  value={editingExtension ? editingExtension.mobile : newExtension.mobile}
+                  onChange={(e) =>
+                    editingExtension
+                      ? setEditingExtension({ ...editingExtension, mobile: e.target.value })
+                      : setNewExtension({ ...newExtension, mobile: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowExtensionDialog(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={editingExtension ? handleUpdateExtension : handleCreateExtension}>
+                {editingExtension ? "Atualizar" : "Criar"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog para Configurações */}
+      <Dialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Configurações do Sistema</DialogTitle>
+            <DialogDescription>Edite as configurações gerais do sistema</DialogDescription>
+          </DialogHeader>
+          {editingSettings && (
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="settings-company">Nome da Empresa *</Label>
+                <Input
+                  id="settings-company"
+                  value={editingSettings.company_name}
+                  onChange={(e) => setEditingSettings({ ...editingSettings, company_name: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="settings-logo">URL do Logo</Label>
+                <Input
+                  id="settings-logo"
+                  value={editingSettings.logo_url || ""}
+                  onChange={(e) => setEditingSettings({ ...editingSettings, logo_url: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Cores do Sistema</Label>
+                <div className="grid grid-cols-3 gap-4 mt-2">
+                  <div>
+                    <Label htmlFor="primary-color">Cor Primária</Label>
+                    <Input
+                      id="primary-color"
+                      type="color"
+                      value={editingSettings.primary_color}
+                      onChange={(e) => setEditingSettings({ ...editingSettings, primary_color: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="secondary-color">Cor Secundária</Label>
+                    <Input
+                      id="secondary-color"
+                      type="color"
+                      value={editingSettings.secondary_color}
+                      onChange={(e) => setEditingSettings({ ...editingSettings, secondary_color: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="accent-color">Cor de Destaque</Label>
+                    <Input
+                      id="accent-color"
+                      type="color"
+                      value={editingSettings.accent_color}
+                      onChange={(e) => setEditingSettings({ ...editingSettings, accent_color: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setShowSettingsDialog(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleUpdateSettings}>Salvar</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -23,6 +23,11 @@ import {
   Users,
   LinkIcon,
   Info,
+  Star,
+  Clock,
+  Zap,
+  Globe,
+  Shield,
 } from "lucide-react"
 import {
   initializeData,
@@ -36,6 +41,7 @@ import {
   getPostTypeIcon,
   getPostTypeName,
   getPriorityColor,
+  formatTimeAgo,
   type User as UserType,
   type Category,
   type Link,
@@ -54,6 +60,7 @@ export default function DashboardPage() {
   const [systemInfo, setSystemInfo] = useState<any>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [loading, setLoading] = useState(true)
+  const [favoriteLinks, setFavoriteLinks] = useState<string[]>([])
   const router = useRouter()
 
   useEffect(() => {
@@ -82,6 +89,12 @@ export default function DashboardPage() {
       setExtensions(allExtensions)
       setSettings(appSettings)
       setSystemInfo(sysInfo)
+
+      // Carregar favoritos do localStorage
+      const savedFavorites = localStorage.getItem(`favorites_${userData.id}`)
+      if (savedFavorites) {
+        setFavoriteLinks(JSON.parse(savedFavorites))
+      }
     } catch (error) {
       console.error("Erro ao carregar dados:", error)
       router.push("/login")
@@ -107,15 +120,15 @@ export default function DashboardPage() {
     router.push("/admin")
   }
 
-  const formatTimeAgo = (dateString: string) => {
-    const now = new Date()
-    const date = new Date(dateString)
-    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
+  const toggleFavorite = (linkId: string) => {
+    if (!user) return
 
-    if (diffInMinutes < 1) return "agora"
-    if (diffInMinutes < 60) return `${diffInMinutes} min atrás`
-    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h atrás`
-    return `${Math.floor(diffInMinutes / 1440)} dias atrás`
+    const newFavorites = favoriteLinks.includes(linkId)
+      ? favoriteLinks.filter((id) => id !== linkId)
+      : [...favoriteLinks, linkId]
+
+    setFavoriteLinks(newFavorites)
+    localStorage.setItem(`favorites_${user.id}`, JSON.stringify(newFavorites))
   }
 
   const formatExpiryDate = (dateString: string) => {
@@ -177,10 +190,8 @@ export default function DashboardPage() {
                   <Badge variant="outline" className="text-xs">
                     {systemInfo.isInitialized ? "✅ Ativo" : "⚠️ Inicializando"}
                   </Badge>
-                  {systemInfo.initDate && (
-                    <span className="text-xs text-gray-500">
-                      Desde {systemInfo.initDate.toLocaleDateString("pt-BR")}
-                    </span>
+                  {user.last_login && (
+                    <span className="text-xs text-gray-500">Último login: {formatTimeAgo(user.last_login)}</span>
                   )}
                 </div>
               )}
@@ -244,10 +255,14 @@ export default function DashboardPage() {
                   <Info className="h-4 w-4 text-blue-600" />
                   <h3 className="font-medium text-blue-900">Status do Sistema</h3>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-sm">
                   <div>
                     <span className="text-blue-700 font-medium">Usuários:</span>
                     <span className="ml-1 text-blue-900">{systemInfo.dataCount.users}</span>
+                  </div>
+                  <div>
+                    <span className="text-blue-700 font-medium">Grupos:</span>
+                    <span className="ml-1 text-blue-900">{systemInfo.dataCount.groups}</span>
                   </div>
                   <div>
                     <span className="text-blue-700 font-medium">Categorias:</span>
@@ -378,10 +393,75 @@ export default function DashboardPage() {
           </TabsContent>
 
           <TabsContent value="portals" className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Sistemas Corporativos</h3>
-              <p className="text-sm text-gray-600">Acesse os sistemas e ferramentas da empresa</p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Sistemas Corporativos</h3>
+                <p className="text-sm text-gray-600">Acesse os sistemas e ferramentas da empresa</p>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                  <Star className="h-3 w-3 mr-1" />
+                  {favoriteLinks.length} Favoritos
+                </Badge>
+                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                  <Globe className="h-3 w-3 mr-1" />
+                  {links.length} Sistemas
+                </Badge>
+              </div>
             </div>
+
+            {/* Links Favoritos */}
+            {favoriteLinks.length > 0 && (
+              <Card className="bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center space-x-2 text-yellow-800">
+                    <Star className="h-5 w-5 text-yellow-600" />
+                    <span>Seus Favoritos</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    {links
+                      .filter((link) => favoriteLinks.includes(link.id))
+                      .map((link) => (
+                        <div
+                          key={link.id}
+                          className="group relative bg-white/80 backdrop-blur-sm p-4 rounded-xl border border-yellow-200 hover:border-yellow-300 hover:bg-white transition-all duration-300 hover:shadow-lg"
+                        >
+                          <div className="flex items-center space-x-3 mb-3">
+                            <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg flex items-center justify-center text-white text-lg shadow-md">
+                              {link.icon || "🔗"}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-semibold text-gray-900 truncate group-hover:text-yellow-700 transition-colors">
+                                {link.title}
+                              </h4>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => toggleFavorite(link.id)}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                            </Button>
+                          </div>
+                          <a href={link.url} target="_blank" rel="noopener noreferrer" className="block w-full">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-none hover:from-yellow-500 hover:to-orange-600"
+                            >
+                              <ExternalLink className="h-3 w-3 mr-2" />
+                              Acessar
+                            </Button>
+                          </a>
+                        </div>
+                      ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {categories.length === 0 ? (
               <Card>
@@ -401,35 +481,102 @@ export default function DashboardPage() {
                   if (categoryLinks.length === 0) return null
 
                   return (
-                    <Card key={category.id}>
-                      <CardHeader>
-                        <CardTitle className="flex items-center space-x-2">
-                          <div className="w-4 h-4 rounded-full" style={{ backgroundColor: category.color }} />
-                          <span>{category.name}</span>
-                          <Badge variant="secondary">{categoryLinks.length}</Badge>
-                        </CardTitle>
-                        {category.description && <CardDescription>{category.description}</CardDescription>}
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                          {categoryLinks.map((link) => (
-                            <a
-                              key={link.id}
-                              href={link.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-colors group"
+                    <Card key={category.id} className="overflow-hidden hover:shadow-lg transition-all duration-300">
+                      <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 border-b">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div
+                              className="w-12 h-12 rounded-xl flex items-center justify-center text-white text-xl shadow-lg"
+                              style={{ background: `linear-gradient(135deg, ${category.color}, ${category.color}dd)` }}
                             >
-                              <div className="flex-1 min-w-0">
-                                <h4 className="font-medium text-gray-900 truncate group-hover:text-blue-600">
-                                  {link.title}
-                                </h4>
-                                {link.description && (
-                                  <p className="text-sm text-gray-600 truncate">{link.description}</p>
-                                )}
+                              {category.icon || "📁"}
+                            </div>
+                            <div>
+                              <span className="text-lg font-bold text-gray-900">{category.name}</span>
+                              <Badge variant="secondary" className="ml-3">
+                                {categoryLinks.length} {categoryLinks.length === 1 ? "sistema" : "sistemas"}
+                              </Badge>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                              <Shield className="h-3 w-3 mr-1" />
+                              Autorizado
+                            </Badge>
+                          </div>
+                        </div>
+                        {category.description && (
+                          <CardDescription className="text-gray-600 font-medium">
+                            {category.description}
+                          </CardDescription>
+                        )}
+                      </CardHeader>
+                      <CardContent className="p-6">
+                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                          {categoryLinks.map((link) => (
+                            <div
+                              key={link.id}
+                              className="group relative p-5 rounded-xl border-2 border-gray-100 hover:border-blue-200 hover:bg-blue-50/50 transition-all duration-300 hover:shadow-lg"
+                            >
+                              <div className="flex items-start space-x-4">
+                                <div className="relative">
+                                  <div
+                                    className="w-12 h-12 rounded-lg flex items-center justify-center text-white text-lg shadow-md group-hover:scale-110 transition-transform duration-300"
+                                    style={{ backgroundColor: category.color }}
+                                  >
+                                    {link.icon || "🔗"}
+                                  </div>
+                                  <div className="absolute -top-1 -right-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => toggleFavorite(link.id)}
+                                      className="w-6 h-6 p-0 rounded-full bg-white shadow-sm hover:bg-yellow-50 opacity-0 group-hover:opacity-100 transition-all duration-300"
+                                    >
+                                      <Star
+                                        className={`h-3 w-3 ${
+                                          favoriteLinks.includes(link.id)
+                                            ? "fill-yellow-400 text-yellow-400"
+                                            : "text-gray-400"
+                                        }`}
+                                      />
+                                    </Button>
+                                  </div>
+                                </div>
+
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-bold text-gray-900 truncate text-lg group-hover:text-blue-600 transition-colors mb-1">
+                                    {link.title}
+                                  </h4>
+                                  {link.description && (
+                                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">{link.description}</p>
+                                  )}
+
+                                  <div className="flex items-center space-x-2 mb-3">
+                                    <Badge variant="outline" className="text-xs">
+                                      <Globe className="h-3 w-3 mr-1" />
+                                      Sistema Web
+                                    </Badge>
+                                    <Badge variant="outline" className="text-xs">
+                                      <Clock className="h-3 w-3 mr-1" />
+                                      24/7
+                                    </Badge>
+                                  </div>
+
+                                  <a href={link.url} target="_blank" rel="noopener noreferrer" className="block w-full">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="w-full group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600 transition-all duration-300 bg-transparent"
+                                    >
+                                      <ExternalLink className="h-4 w-4 mr-2" />
+                                      Acessar Sistema
+                                      <Zap className="h-3 w-3 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </Button>
+                                  </a>
+                                </div>
                               </div>
-                              <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-blue-600 ml-2 flex-shrink-0" />
-                            </a>
+                            </div>
                           ))}
                         </div>
                       </CardContent>
@@ -513,17 +660,21 @@ export default function DashboardPage() {
                       className={`border-2 ${colors.border} shadow-lg hover:shadow-xl transition-all duration-300`}
                     >
                       <CardHeader className={`bg-gradient-to-r ${colors.bg} rounded-t-lg`}>
-                        <CardTitle className="flex items-center space-x-3">
-                          <div className={`w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-md`}>
-                            <Users className={`h-5 w-5 ${colors.icon}`} />
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div
+                              className={`w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-md`}
+                            >
+                              <Users className={`h-5 w-5 ${colors.icon}`} />
+                            </div>
+                            <div>
+                              <span className={`text-lg font-bold ${colors.icon}`}>{department}</span>
+                              <Badge variant="secondary" className="ml-3 bg-white/80 text-gray-700">
+                                {deptExtensions.length} {deptExtensions.length === 1 ? "pessoa" : "pessoas"}
+                              </Badge>
+                            </div>
                           </div>
-                          <div>
-                            <span className={`text-lg font-bold ${colors.icon}`}>{department}</span>
-                            <Badge variant="secondary" className="ml-3 bg-white/80 text-gray-700">
-                              {deptExtensions.length} {deptExtensions.length === 1 ? "pessoa" : "pessoas"}
-                            </Badge>
-                          </div>
-                        </CardTitle>
+                        </div>
                       </CardHeader>
                       <CardContent className="p-6">
                         <div className="grid gap-6 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
