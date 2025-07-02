@@ -209,7 +209,7 @@ export async function authenticateUser(
   error?: string
   source: "ad" | "local"
 }> {
-  console.log(`🔍 Iniciando autenticação para ${email}...`)
+  console.log(`🔍 === INICIANDO AUTENTICAÇÃO PARA: ${email} ===`)
 
   // 1. Tentar autenticação com Active Directory primeiro (se habilitado)
   if (AD_CONFIG.enabled) {
@@ -231,27 +231,68 @@ export async function authenticateUser(
     } catch (error) {
       console.warn("⚠️ Falha na autenticação AD, tentando local:", error)
     }
+  } else {
+    console.log(`⚠️ Active Directory está DESABILITADO - usando apenas autenticação local`)
   }
 
   // 2. Autenticação local (principal)
-  console.log(`🔍 Tentando autenticação local para ${email}...`)
+  console.log(`🔍 === INICIANDO AUTENTICAÇÃO LOCAL ===`)
 
   try {
-    // Importar funções do local storage
-    const { getUsers, validatePassword, updateUserLastLogin } = await import("./local-storage")
+    // Verificar se localStorage está disponível
+    if (typeof localStorage === "undefined") {
+      console.error("❌ localStorage não está disponível")
+      return {
+        success: false,
+        error: "Erro interno do sistema",
+        source: "local",
+      }
+    }
 
-    // Buscar usuário diretamente na lista de usuários
-    const users = getUsers()
-    console.log(`📋 Total de usuários cadastrados: ${users.length}`)
+    // Buscar usuários diretamente do localStorage
+    const usersData = localStorage.getItem("intranet_users")
+    console.log(`📋 Dados brutos do localStorage:`, usersData ? "ENCONTRADOS" : "NÃO ENCONTRADOS")
 
-    const localUser = users.find((user) => user.email.toLowerCase() === email.toLowerCase())
+    if (!usersData) {
+      console.error("❌ Nenhum dado de usuários encontrado no localStorage")
+      return {
+        success: false,
+        error: "Sistema não inicializado",
+        source: "local",
+      }
+    }
+
+    let users
+    try {
+      users = JSON.parse(usersData)
+      console.log(`📋 Total de usuários no sistema: ${users.length}`)
+      console.log(
+        `📋 Emails cadastrados:`,
+        users.map((u: any) => u.email),
+      )
+    } catch (parseError) {
+      console.error("❌ Erro ao fazer parse dos dados de usuários:", parseError)
+      return {
+        success: false,
+        error: "Dados corrompidos",
+        source: "local",
+      }
+    }
+
+    // Buscar usuário específico
+    const localUser = users.find((user: any) => {
+      const userEmail = user.email?.toLowerCase()
+      const searchEmail = email.toLowerCase()
+      console.log(`🔍 Comparando: "${userEmail}" === "${searchEmail}"`)
+      return userEmail === searchEmail
+    })
 
     if (!localUser) {
-      console.log(`❌ Usuário ${email} não encontrado na base local`)
-      console.log(
-        `📋 Usuários disponíveis:`,
-        users.map((u) => u.email),
-      )
+      console.log(`❌ Usuário ${email} NÃO ENCONTRADO na base local`)
+      console.log(`📋 Usuários disponíveis:`)
+      users.forEach((u: any, index: number) => {
+        console.log(`   ${index + 1}. ${u.email} (${u.name}) - Ativo: ${u.active}`)
+      })
       return {
         success: false,
         error: "Email não autorizado",
@@ -259,16 +300,17 @@ export async function authenticateUser(
       }
     }
 
-    console.log(`✅ Usuário ${email} encontrado:`, {
+    console.log(`✅ Usuário ${email} ENCONTRADO:`, {
       id: localUser.id,
       name: localUser.name,
       role: localUser.role,
       active: localUser.active,
+      groups: localUser.groups,
     })
 
     // Verificar se o usuário está ativo
     if (!localUser.active) {
-      console.log(`❌ Usuário ${email} está inativo`)
+      console.log(`❌ Usuário ${email} está INATIVO`)
       return {
         success: false,
         error: "Usuário inativo",
@@ -277,9 +319,16 @@ export async function authenticateUser(
     }
 
     // Validar senha
-    const isValidPassword = validatePassword(password, localUser.password_hash || "")
+    console.log(`🔐 Validando senha para ${email}...`)
+    const storedHash = localUser.password_hash || ""
+    console.log(`🔐 Hash armazenado: ${storedHash.substring(0, 20)}...`)
+
+    // Função de validação de senha simplificada
+    const isValidPassword = validatePasswordSimple(password, storedHash)
+    console.log(`🔐 Senha válida: ${isValidPassword}`)
+
     if (!isValidPassword) {
-      console.log(`❌ Senha incorreta para ${email}`)
+      console.log(`❌ Senha INCORRETA para ${email}`)
       return {
         success: false,
         error: "Senha incorreta",
@@ -287,10 +336,18 @@ export async function authenticateUser(
       }
     }
 
-    console.log(`✅ Autenticação local bem-sucedida para ${email}`)
+    console.log(`✅ AUTENTICAÇÃO LOCAL BEM-SUCEDIDA para ${email}`)
 
     // Atualizar último login
-    updateUserLastLogin(email)
+    try {
+      const updatedUsers = users.map((u: any) =>
+        u.email === email ? { ...u, last_login: new Date().toISOString() } : u,
+      )
+      localStorage.setItem("intranet_users", JSON.stringify(updatedUsers))
+      console.log(`✅ Último login atualizado para ${email}`)
+    } catch (updateError) {
+      console.warn("⚠️ Erro ao atualizar último login:", updateError)
+    }
 
     // Converter usuário local para formato AuthUser
     const authUser: AuthUser = {
@@ -304,13 +361,14 @@ export async function authenticateUser(
       lastLogin: new Date().toISOString(),
     }
 
+    console.log(`✅ === AUTENTICAÇÃO CONCLUÍDA COM SUCESSO ===`)
     return {
       success: true,
       user: authUser,
       source: "local",
     }
   } catch (error) {
-    console.error("❌ Erro na autenticação local:", error)
+    console.error("❌ ERRO CRÍTICO na autenticação local:", error)
     return {
       success: false,
       error: "Erro interno do sistema",
@@ -319,14 +377,43 @@ export async function authenticateUser(
   }
 }
 
+// Função simplificada de validação de senha
+function validatePasswordSimple(inputPassword: string, storedHash: string): boolean {
+  console.log(`🔐 Validando senha:`)
+  console.log(`   - Senha digitada: "${inputPassword}"`)
+  console.log(`   - Hash armazenado: "${storedHash}"`)
+
+  // Se não há hash armazenado, não pode validar
+  if (!storedHash) {
+    console.log(`🔐 Nenhum hash armazenado`)
+    return false
+  }
+
+  // Extrair a senha do hash (formato: hashed_SENHA_TIMESTAMP)
+  const hashParts = storedHash.split("_")
+  if (hashParts.length < 2) {
+    console.log(`🔐 Formato de hash inválido`)
+    return false
+  }
+
+  // A senha está na segunda parte do hash
+  const storedPassword = hashParts[1]
+  console.log(`🔐 Senha extraída do hash: "${storedPassword}"`)
+
+  const isValid = inputPassword === storedPassword
+  console.log(`🔐 Resultado da validação: ${isValid}`)
+
+  return isValid
+}
+
 // Sincronizar usuário AD com localStorage (cache)
 async function syncADUserToLocal(adUser: AuthUser): Promise<void> {
   try {
-    const { getUsers, saveUsers } = await import("./local-storage")
-    const localUsers = getUsers()
+    const usersData = localStorage.getItem("intranet_users")
+    const localUsers = usersData ? JSON.parse(usersData) : []
 
     // Verificar se usuário já existe
-    const existingUserIndex = localUsers.findIndex((u) => u.email === adUser.email)
+    const existingUserIndex = localUsers.findIndex((u: any) => u.email === adUser.email)
 
     const localUserData = {
       id: adUser.id,
@@ -353,7 +440,7 @@ async function syncADUserToLocal(adUser: AuthUser): Promise<void> {
       console.log(`➕ Usuário AD ${adUser.email} adicionado ao cache local`)
     }
 
-    saveUsers(localUsers)
+    localStorage.setItem("intranet_users", JSON.stringify(localUsers))
   } catch (error) {
     console.error("❌ Erro ao sincronizar usuário AD:", error)
   }

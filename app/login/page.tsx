@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Building2, Mail, Lock, Eye, EyeOff, CheckCircle, AlertCircle } from "lucide-react"
+import { Building2, Mail, Lock, Eye, EyeOff, CheckCircle, AlertCircle, Bug } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 import { initializeData, getSettings } from "@/lib/local-storage"
 import { authenticateUser } from "@/lib/auth-service"
@@ -22,6 +22,7 @@ export default function LoginPage() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [settings, setSettings] = useState<any>(null)
+  const [showDebug, setShowDebug] = useState(false)
   const router = useRouter()
 
   const [showRequestForm, setShowRequestForm] = useState(false)
@@ -34,6 +35,7 @@ export default function LoginPage() {
   const [requestMessage, setRequestMessage] = useState("")
 
   useEffect(() => {
+    console.log("🚀 Inicializando página de login...")
     initializeData()
 
     // Carregar configurações
@@ -43,7 +45,27 @@ export default function LoginPage() {
     // Verificar se já está logado
     const savedUser = localStorage.getItem("intranet_user")
     if (savedUser) {
+      console.log("✅ Usuário já logado, redirecionando...")
       router.push("/dashboard")
+    }
+
+    // Mostrar informações de debug
+    console.log("🔍 Informações de debug:")
+    console.log("   - localStorage disponível:", typeof localStorage !== "undefined")
+    console.log("   - Dados de usuários:", localStorage.getItem("intranet_users") ? "EXISTEM" : "NÃO EXISTEM")
+
+    const usersData = localStorage.getItem("intranet_users")
+    if (usersData) {
+      try {
+        const users = JSON.parse(usersData)
+        console.log(`   - Total de usuários: ${users.length}`)
+        console.log(
+          "   - Emails cadastrados:",
+          users.map((u: any) => u.email),
+        )
+      } catch (e) {
+        console.error("   - Erro ao ler usuários:", e)
+      }
     }
   }, [router])
 
@@ -53,9 +75,16 @@ export default function LoginPage() {
     setError("")
     setSuccess("")
 
-    console.log(`🚀 Iniciando processo de login para: ${email}`)
+    console.log(`🚀 === INICIANDO PROCESSO DE LOGIN ===`)
+    console.log(`📧 Email: ${email}`)
+    console.log(`🔐 Senha: ${password ? "[FORNECIDA]" : "[VAZIA]"}`)
 
     try {
+      // Verificar se os dados básicos estão presentes
+      if (!email || !password) {
+        throw new Error("Email e senha são obrigatórios")
+      }
+
       // Usar novo serviço de autenticação
       const authResult = await authenticateUser(email, password)
 
@@ -93,14 +122,16 @@ export default function LoginPage() {
       }
 
       localStorage.setItem("intranet_user", JSON.stringify(userData))
+      console.log(`✅ Dados do usuário salvos no localStorage`)
 
       setSuccess(`Login realizado com sucesso! Bem-vindo, ${user.name}!`)
 
       setTimeout(() => {
+        console.log(`🔄 Redirecionando para dashboard...`)
         window.location.href = "/dashboard"
       }, 1500)
     } catch (error: any) {
-      console.error(`❌ Erro no login:`, error)
+      console.error(`❌ ERRO NO LOGIN:`, error)
       setError(error.message)
     } finally {
       setLoading(false)
@@ -123,6 +154,25 @@ export default function LoginPage() {
       setError(error.message)
     } finally {
       setRequestLoading(false)
+    }
+  }
+
+  const showDebugInfo = () => {
+    const usersData = localStorage.getItem("intranet_users")
+    if (usersData) {
+      try {
+        const users = JSON.parse(usersData)
+        console.log("🔍 === INFORMAÇÕES DE DEBUG ===")
+        console.log(`Total de usuários: ${users.length}`)
+        users.forEach((user: any, index: number) => {
+          console.log(`${index + 1}. ${user.email} (${user.name}) - Ativo: ${user.active} - Role: ${user.role}`)
+        })
+        alert(`Debug: ${users.length} usuários encontrados. Verifique o console para detalhes.`)
+      } catch (e) {
+        alert("Erro ao ler dados de usuários")
+      }
+    } else {
+      alert("Nenhum dado de usuários encontrado")
     }
   }
 
@@ -205,7 +255,16 @@ export default function LoginPage() {
             {error && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription>
+                  {error}
+                  {error.includes("não autorizado") && (
+                    <div className="mt-2 text-xs">
+                      <p>• Verifique se o email está correto</p>
+                      <p>• Confirme se você foi cadastrado pelo administrador</p>
+                      <p>• Tente fazer logout e login novamente</p>
+                    </div>
+                  )}
+                </AlertDescription>
               </Alert>
             )}
 
@@ -240,6 +299,14 @@ export default function LoginPage() {
                 className="w-full"
               >
                 Não tem acesso? Solicitar Autorização
+              </Button>
+            </div>
+
+            {/* Botão de Debug */}
+            <div className="mt-2 text-center">
+              <Button type="button" variant="ghost" size="sm" onClick={showDebugInfo} className="text-xs">
+                <Bug className="h-3 w-3 mr-1" />
+                Debug: Ver usuários cadastrados
               </Button>
             </div>
 
@@ -302,7 +369,7 @@ export default function LoginPage() {
           <div className="mt-6 text-center text-sm text-gray-600">
             <p>Apenas usuários autorizados podem acessar o sistema.</p>
             <p className="text-xs text-gray-500 mt-2">
-              Problemas com login? Verifique se seu email está correto e se você foi cadastrado pelo administrador.
+              Problemas com login? Use o botão "Debug" acima para verificar se seu usuário foi cadastrado.
             </p>
           </div>
         </CardContent>
