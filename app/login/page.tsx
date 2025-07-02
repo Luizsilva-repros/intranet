@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Building2, Mail, Lock, Eye, EyeOff, CheckCircle } from "lucide-react"
+import { Building2, Mail, Lock, Eye, EyeOff, CheckCircle, AlertCircle } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 import { initializeData, getSettings } from "@/lib/local-storage"
 import { authenticateUser } from "@/lib/auth-service"
@@ -53,15 +53,28 @@ export default function LoginPage() {
     setError("")
     setSuccess("")
 
+    console.log(`🚀 Iniciando processo de login para: ${email}`)
+
     try {
       // Usar novo serviço de autenticação
       const authResult = await authenticateUser(email, password)
 
+      console.log(`📋 Resultado da autenticação:`, authResult)
+
       if (!authResult.success) {
+        console.log(`❌ Falha na autenticação: ${authResult.error}`)
         throw new Error(authResult.error || "Falha na autenticação")
       }
 
       const user = authResult.user!
+
+      console.log(`✅ Usuário autenticado com sucesso:`, {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        source: user.source,
+      })
 
       // Salvar dados do usuário
       const userData = {
@@ -81,12 +94,13 @@ export default function LoginPage() {
 
       localStorage.setItem("intranet_user", JSON.stringify(userData))
 
-      setSuccess("Login realizado com sucesso! Redirecionando...")
+      setSuccess(`Login realizado com sucesso! Bem-vindo, ${user.name}!`)
 
       setTimeout(() => {
         window.location.href = "/dashboard"
       }, 1500)
     } catch (error: any) {
+      console.error(`❌ Erro no login:`, error)
       setError(error.message)
     } finally {
       setLoading(false)
@@ -190,6 +204,7 @@ export default function LoginPage() {
 
             {error && (
               <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
@@ -207,7 +222,14 @@ export default function LoginPage() {
             )}
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Autenticando..." : "Entrar"}
+              {loading ? (
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Autenticando...
+                </div>
+              ) : (
+                "Entrar"
+              )}
             </Button>
 
             <div className="mt-4 text-center">
@@ -263,6 +285,7 @@ export default function LoginPage() {
 
                     {requestMessage && (
                       <Alert>
+                        <CheckCircle className="h-4 w-4" />
                         <AlertDescription>{requestMessage}</AlertDescription>
                       </Alert>
                     )}
@@ -278,6 +301,9 @@ export default function LoginPage() {
 
           <div className="mt-6 text-center text-sm text-gray-600">
             <p>Apenas usuários autorizados podem acessar o sistema.</p>
+            <p className="text-xs text-gray-500 mt-2">
+              Problemas com login? Verifique se seu email está correto e se você foi cadastrado pelo administrador.
+            </p>
           </div>
         </CardContent>
       </Card>

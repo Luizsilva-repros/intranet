@@ -25,7 +25,7 @@ export interface ADConfig {
 
 // Configuração do AD (pode ser movida para settings)
 const AD_CONFIG: ADConfig = {
-  enabled: true, // Habilitar/desabilitar integração AD
+  enabled: false, // Desabilitado por padrão para usar autenticação local
   domain: "repros.com.br",
   server: "ldap://dc.repros.com.br:389",
   baseDN: "DC=repros,DC=com,DC=br",
@@ -209,6 +209,8 @@ export async function authenticateUser(
   error?: string
   source: "ad" | "local"
 }> {
+  console.log(`🔍 Iniciando autenticação para ${email}...`)
+
   // 1. Tentar autenticação com Active Directory primeiro (se habilitado)
   if (AD_CONFIG.enabled) {
     console.log(`🔍 Tentando autenticação AD para ${email}...`)
@@ -231,47 +233,89 @@ export async function authenticateUser(
     }
   }
 
-  // 2. Fallback para autenticação local
+  // 2. Autenticação local (principal)
   console.log(`🔍 Tentando autenticação local para ${email}...`)
 
-  const { isEmailAuthorized, validatePassword } = await import("./local-storage")
-  const localUser = isEmailAuthorized(email)
+  try {
+    // Importar funções do local storage
+    const { getUsers, validatePassword, updateUserLastLogin } = await import("./local-storage")
 
-  if (!localUser) {
+    // Buscar usuário diretamente na lista de usuários
+    const users = getUsers()
+    console.log(`📋 Total de usuários cadastrados: ${users.length}`)
+
+    const localUser = users.find((user) => user.email.toLowerCase() === email.toLowerCase())
+
+    if (!localUser) {
+      console.log(`❌ Usuário ${email} não encontrado na base local`)
+      console.log(
+        `📋 Usuários disponíveis:`,
+        users.map((u) => u.email),
+      )
+      return {
+        success: false,
+        error: "Email não autorizado",
+        source: "local",
+      }
+    }
+
+    console.log(`✅ Usuário ${email} encontrado:`, {
+      id: localUser.id,
+      name: localUser.name,
+      role: localUser.role,
+      active: localUser.active,
+    })
+
+    // Verificar se o usuário está ativo
+    if (!localUser.active) {
+      console.log(`❌ Usuário ${email} está inativo`)
+      return {
+        success: false,
+        error: "Usuário inativo",
+        source: "local",
+      }
+    }
+
+    // Validar senha
+    const isValidPassword = validatePassword(password, localUser.password_hash || "")
+    if (!isValidPassword) {
+      console.log(`❌ Senha incorreta para ${email}`)
+      return {
+        success: false,
+        error: "Senha incorreta",
+        source: "local",
+      }
+    }
+
+    console.log(`✅ Autenticação local bem-sucedida para ${email}`)
+
+    // Atualizar último login
+    updateUserLastLogin(email)
+
+    // Converter usuário local para formato AuthUser
+    const authUser: AuthUser = {
+      id: localUser.id,
+      email: localUser.email,
+      name: localUser.name,
+      displayName: localUser.name,
+      groups: localUser.groups || ["user"],
+      role: localUser.role,
+      source: "local",
+      lastLogin: new Date().toISOString(),
+    }
+
     return {
-      success: false,
-      error: "Email não autorizado",
+      success: true,
+      user: authUser,
       source: "local",
     }
-  }
-
-  const isValidPassword = validatePassword(password, localUser.password_hash || "")
-  if (!isValidPassword) {
+  } catch (error) {
+    console.error("❌ Erro na autenticação local:", error)
     return {
       success: false,
-      error: "Senha incorreta",
+      error: "Erro interno do sistema",
       source: "local",
     }
-  }
-
-  console.log(`✅ Autenticação local bem-sucedida para ${email}`)
-
-  // Converter usuário local para formato AuthUser
-  const authUser: AuthUser = {
-    id: localUser.id,
-    email: localUser.email,
-    name: localUser.name,
-    displayName: localUser.name,
-    groups: localUser.groups || ["user"],
-    role: localUser.role,
-    source: "local",
-    lastLogin: new Date().toISOString(),
-  }
-
-  return {
-    success: true,
-    user: authUser,
-    source: "local",
   }
 }
 
@@ -292,8 +336,10 @@ async function syncADUserToLocal(adUser: AuthUser): Promise<void> {
       active: true,
       group_ids: adUser.groups,
       groups: adUser.groups,
+      link_permissions: [],
       password_hash: `ad_synced_${Date.now()}`, // Placeholder - senha é validada pelo AD
       last_password_reset: new Date().toISOString(),
+      last_login: new Date().toISOString(),
       created_at: existingUserIndex >= 0 ? localUsers[existingUserIndex].created_at : new Date().toISOString(),
     }
 
