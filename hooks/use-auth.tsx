@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { createContext, useContext, useEffect, useState } from "react"
 
 interface AuthUser {
@@ -32,20 +31,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Verificar se há usuário logado no localStorage
     const savedUser = localStorage.getItem("intranet_user")
+    console.log("🔍 Verificando usuário salvo:", savedUser)
+
     if (savedUser) {
       try {
         const userData = JSON.parse(savedUser)
+        console.log("✅ Dados do usuário encontrados:", userData)
         setUser({ email: userData.email })
         setAuthUser(userData)
       } catch (error) {
-        console.error("Erro ao carregar usuário:", error)
+        console.error("❌ Erro ao carregar usuário:", error)
         localStorage.removeItem("intranet_user")
       }
+    } else {
+      console.log("ℹ️ Nenhum usuário salvo encontrado")
     }
+
     setLoading(false)
   }, [])
 
   const signOut = async () => {
+    console.log("🚪 Fazendo logout...")
     localStorage.removeItem("intranet_user")
     setUser(null)
     setAuthUser(null)
