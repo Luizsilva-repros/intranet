@@ -21,62 +21,70 @@ export default function LoginPage() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [settings, setSettings] = useState<any>(null)
+  const [isInitialized, setIsInitialized] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
+    // Evitar execução múltipla
+    if (isInitialized) return
+
     console.log("🚀 Inicializando página de login...")
-    initializeData()
 
-    // Carregar configurações
-    const currentSettings = getSettings()
-    setSettings(currentSettings)
+    try {
+      // Inicializar dados do sistema
+      initializeData()
 
-    // Verificar se já está logado
-    const savedUser = localStorage.getItem("intranet_user")
-    if (savedUser) {
-      console.log("✅ Usuário já logado, redirecionando...")
-      router.push("/dashboard")
-    }
+      // Carregar configurações
+      const currentSettings = getSettings()
+      setSettings(currentSettings)
 
-    // Mostrar informações de debug
-    console.log("🔍 Informações de debug:")
-    console.log("   - localStorage disponível:", typeof localStorage !== "undefined")
-    console.log("   - Dados de usuários:", localStorage.getItem("intranet_users") ? "EXISTEM" : "NÃO EXISTEM")
-
-    const usersData = localStorage.getItem("intranet_users")
-    if (usersData) {
-      try {
-        const users = JSON.parse(usersData)
-        console.log(`   - Total de usuários: ${users.length}`)
-        console.log(
-          "   - Emails cadastrados:",
-          users.map((u: any) => u.email),
-        )
-      } catch (e) {
-        console.error("   - Erro ao ler usuários:", e)
+      // Verificar se já está logado (apenas uma vez)
+      const savedUser = localStorage.getItem("intranet_user")
+      if (savedUser) {
+        try {
+          const userData = JSON.parse(savedUser)
+          console.log("✅ Usuário já logado:", userData.email)
+          // Usar replace para evitar loop de navegação
+          router.replace("/dashboard")
+          return
+        } catch (e) {
+          console.error("❌ Erro ao ler dados do usuário logado:", e)
+          localStorage.removeItem("intranet_user")
+        }
       }
+
+      setIsInitialized(true)
+      console.log("✅ Página de login inicializada com sucesso")
+    } catch (error) {
+      console.error("❌ Erro na inicialização:", error)
+      setError("Erro ao inicializar o sistema")
     }
-  }, [router])
+  }, [router, isInitialized])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (loading) return // Evitar múltiplas submissões
+
     setLoading(true)
     setError("")
     setSuccess("")
 
     console.log(`🚀 === INICIANDO PROCESSO DE LOGIN ===`)
     console.log(`📧 Email: ${email}`)
-    console.log(`🔐 Senha: ${password ? "[FORNECIDA]" : "[VAZIA]"}`)
 
     try {
-      // Verificar se os dados básicos estão presentes
+      // Validação básica
       if (!email || !password) {
         throw new Error("Email e senha são obrigatórios")
       }
 
-      // Usar novo serviço de autenticação
-      const authResult = await authenticateUser(email, password)
+      if (!email.includes("@")) {
+        throw new Error("Email inválido")
+      }
 
+      // Autenticar usuário
+      const authResult = await authenticateUser(email, password)
       console.log(`📋 Resultado da autenticação:`, authResult)
 
       if (!authResult.success) {
@@ -85,46 +93,56 @@ export default function LoginPage() {
       }
 
       const user = authResult.user!
-
-      console.log(`✅ Usuário autenticado com sucesso:`, {
+      console.log(`✅ Usuário autenticado:`, {
         id: user.id,
         email: user.email,
         name: user.name,
         role: user.role,
-        source: user.source,
       })
 
-      // Salvar dados do usuário
+      // Preparar dados do usuário para salvar
       const userData = {
         id: user.id,
         email: user.email,
         name: user.name,
-        displayName: user.displayName,
+        displayName: user.displayName || user.name,
         department: user.department,
         title: user.title,
         role: user.role,
         active: true,
-        group_ids: user.groups,
-        groups: user.groups,
-        source: user.source,
-        lastLogin: user.lastLogin,
+        group_ids: user.groups || ["user"],
+        groups: user.groups || ["user"],
+        source: user.source || "local",
+        lastLogin: new Date().toISOString(),
       }
 
+      // Salvar no localStorage
       localStorage.setItem("intranet_user", JSON.stringify(userData))
-      console.log(`✅ Dados do usuário salvos no localStorage`)
+      console.log(`✅ Dados do usuário salvos`)
 
+      // Mostrar mensagem de sucesso
       setSuccess(`Login realizado com sucesso! Bem-vindo, ${user.name}!`)
 
+      // Aguardar um pouco e redirecionar
       setTimeout(() => {
         console.log(`🔄 Redirecionando para dashboard...`)
-        window.location.href = "/dashboard"
-      }, 1500)
+        router.replace("/dashboard")
+      }, 1000)
     } catch (error: any) {
       console.error(`❌ ERRO NO LOGIN:`, error)
-      setError(error.message)
+      setError(error.message || "Erro interno do sistema")
     } finally {
       setLoading(false)
     }
+  }
+
+  // Não renderizar até estar inicializado
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-white">Carregando...</div>
+      </div>
+    )
   }
 
   return (
@@ -176,6 +194,7 @@ export default function LoginPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   className="h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                   required
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -194,11 +213,13 @@ export default function LoginPage() {
                   className="h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500 pr-12"
                   required
                   minLength={3}
+                  disabled={loading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  disabled={loading}
                 >
                   {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
@@ -208,8 +229,9 @@ export default function LoginPage() {
             <div className="text-center">
               <button
                 type="button"
-                className="text-blue-600 hover:text-blue-800 text-sm font-medium underline"
+                className="text-blue-600 hover:text-blue-800 text-sm font-medium underline disabled:opacity-50"
                 onClick={() => alert("Funcionalidade em desenvolvimento")}
+                disabled={loading}
               >
                 Esqueci minha senha
               </button>
@@ -225,18 +247,13 @@ export default function LoginPage() {
             {success && (
               <Alert className="border-green-200 bg-green-50">
                 <CheckCircle className="h-4 w-4 text-green-600" />
-                <AlertDescription className="text-green-800">
-                  {success}
-                  {loading && (
-                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-green-600 inline-block ml-2"></div>
-                  )}
-                </AlertDescription>
+                <AlertDescription className="text-green-800">{success}</AlertDescription>
               </Alert>
             )}
 
             <Button
               type="submit"
-              className="w-full h-12 bg-black hover:bg-gray-800 text-white font-medium text-lg"
+              className="w-full h-12 bg-black hover:bg-gray-800 text-white font-medium text-lg disabled:opacity-50"
               disabled={loading}
             >
               {loading ? (
