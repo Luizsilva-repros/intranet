@@ -40,6 +40,7 @@ export interface Link {
   url: string
   description?: string
   icon?: string
+  image_url?: string // Nova propriedade para imagem personalizada
   category_id: string
   category: string
   groups: string[]
@@ -736,6 +737,7 @@ export function addLink(linkData: {
   url: string
   description?: string
   icon?: string
+  image_url?: string
   category: string
   groups?: string[]
 }): Link {
@@ -750,6 +752,7 @@ export function addLink(linkData: {
     url: linkData.url,
     description: linkData.description || "",
     icon: linkData.icon || "🔗",
+    image_url: linkData.image_url || "",
     category_id: category?.id || "1",
     category: linkData.category,
     groups: linkData.groups || ["admin"],
@@ -767,6 +770,7 @@ export function updateLink(
     url: string
     description?: string
     icon?: string
+    image_url?: string
     category: string
     groups?: string[]
   },
@@ -785,6 +789,7 @@ export function updateLink(
     url: linkData.url,
     description: linkData.description || "",
     icon: linkData.icon || links[linkIndex].icon,
+    image_url: linkData.image_url || links[linkIndex].image_url,
     category_id: category?.id || links[linkIndex].category_id,
     category: linkData.category,
     groups: linkData.groups || links[linkIndex].groups,
@@ -1092,6 +1097,21 @@ export function getPriorityColor(priority: Post["priority"]): string {
   return colors[priority] || "#6B7280"
 }
 
+// ======================================================
+// === FAVORITOS (Links favoritos por usuário) ==========
+// ======================================================
+
+type FavoritesMap = Record<string, string[]> // { [userId]: [linkId, ...] }
+
+function getFavorites(): FavoritesMap {
+  const data = localStorage.getItem("intranet_favorites")
+  return data ? JSON.parse(data) : {}
+}
+
+function saveFavorites(favorites: FavoritesMap) {
+  localStorage.setItem("intranet_favorites", JSON.stringify(favorites))
+}
+
 // Função para verificar se um email está autorizado
 export function isEmailAuthorized(email: string): User | null {
   const users = getUsers()
@@ -1124,4 +1144,34 @@ export function formatTimeAgo(dateString: string): string {
   if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h atrás`
   if (diffInMinutes < 10080) return `${Math.floor(diffInMinutes / 1440)} dias atrás`
   return date.toLocaleDateString("pt-BR")
+}
+
+// ✅ Retorna um único usuário pelo id **ou** email
+export function getUser(identifier: string): User | null {
+  const users = getUsers()
+  return users.find((u) => u.id === identifier || u.email === identifier) || null
+}
+
+// ✅ Verifica se um link é favorito para determinado usuário
+export function isFavorite(userId: string, linkId: string): boolean {
+  const favorites = getFavorites()
+  return (favorites[userId] || []).includes(linkId)
+}
+
+// ✅ Adiciona ou remove um link da lista de favoritos do usuário
+export function toggleFavorite(userId: string, linkId: string): void {
+  const favorites = getFavorites()
+  const userFavs = favorites[userId] || []
+  const index = userFavs.indexOf(linkId)
+
+  if (index > -1) {
+    // Já é favorito → remover
+    userFavs.splice(index, 1)
+  } else {
+    // Ainda não é favorito → adicionar
+    userFavs.push(linkId)
+  }
+
+  favorites[userId] = userFavs
+  saveFavorites(favorites)
 }

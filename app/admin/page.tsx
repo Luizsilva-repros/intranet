@@ -136,6 +136,7 @@ export default function AdminPage() {
     url: "",
     description: "",
     icon: "🔗",
+    image_url: "",
     category_id: "",
     groups: [] as string[],
   })
@@ -252,6 +253,7 @@ export default function AdminPage() {
       url: "",
       description: "",
       icon: "🔗",
+      image_url: "",
       category_id: "",
       groups: [],
     })
@@ -461,6 +463,7 @@ export default function AdminPage() {
         url: newLink.url,
         description: newLink.description,
         icon: newLink.icon,
+        image_url: newLink.image_url,
         category: category?.name || "",
         groups: newLink.groups.length > 0 ? newLink.groups : ["admin"],
       })
@@ -487,6 +490,7 @@ export default function AdminPage() {
         url: editingLink.url,
         description: editingLink.description,
         icon: editingLink.icon,
+        image_url: editingLink.image_url,
         category: category?.name || "",
         groups: editingLink.groups,
       })
@@ -744,6 +748,76 @@ export default function AdminPage() {
   const removeImage = () => {
     setEditImagePreview("")
     setEditPostForm({ ...editPostForm, image_url: "" })
+  }
+
+  // Função para redimensionar imagem para links:
+  const resizeLinkImage = (file: File, maxWidth = 64, maxHeight = 64): Promise<string> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement("canvas")
+      const ctx = canvas.getContext("2d")!
+      const img = new Image()
+
+      img.onload = () => {
+        canvas.width = maxWidth
+        canvas.height = maxHeight
+
+        // Calcular dimensões mantendo proporção
+        let { width, height } = img
+        const aspectRatio = width / height
+
+        if (aspectRatio > 1) {
+          width = maxWidth
+          height = maxWidth / aspectRatio
+        } else {
+          height = maxHeight
+          width = maxHeight * aspectRatio
+        }
+
+        // Centralizar a imagem no canvas
+        const x = (maxWidth - width) / 2
+        const y = (maxHeight - height) / 2
+
+        ctx.fillStyle = "#f8f9fa"
+        ctx.fillRect(0, 0, maxWidth, maxHeight)
+        ctx.drawImage(img, x, y, width, height)
+        resolve(canvas.toDataURL("image/jpeg", 0.9))
+      }
+
+      img.src = URL.createObjectURL(file)
+    })
+  }
+
+  const handleLinkImageSelect = async (file: File | null) => {
+    if (!file) return
+
+    if (!file.type.startsWith("image/")) {
+      showMessage("Por favor, selecione apenas arquivos de imagem")
+      return
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      showMessage("A imagem deve ter no máximo 2MB")
+      return
+    }
+
+    try {
+      const resizedBase64 = await resizeLinkImage(file, 64, 64)
+      if (editingLink) {
+        setEditingLink({ ...editingLink, image_url: resizedBase64 })
+      } else {
+        setNewLink({ ...newLink, image_url: resizedBase64 })
+      }
+    } catch (error) {
+      showMessage("Erro ao processar a imagem")
+    }
+  }
+
+  const removeLinkImage = () => {
+    if (editingLink) {
+      setEditingLink({ ...editingLink, image_url: "" })
+    } else {
+      setNewLink({ ...newLink, image_url: "" })
+    }
   }
 
   if (loading) {
@@ -1749,6 +1823,53 @@ export default function AdminPage() {
                 ))}
               </div>
             </div>
+
+            {/* Dentro do Dialog para Links, após o campo de ícone */}
+            <div>
+              <Label>Imagem do Sistema (opcional)</Label>
+              <p className="text-xs text-gray-500 mb-2">
+                Faça upload de uma imagem para usar como ícone personalizado (64x64px, máx 2MB)
+              </p>
+              <div className="space-y-2">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleLinkImageSelect(e.target.files?.[0] || null)}
+                  className="hidden"
+                  id="link-image-upload"
+                />
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => document.getElementById("link-image-upload")?.click()}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Selecionar Imagem
+                  </Button>
+                  {(editingLink?.image_url || newLink.image_url) && (
+                    <Button type="button" variant="outline" onClick={removeLinkImage}>
+                      <X className="h-4 w-4 mr-2" />
+                      Remover
+                    </Button>
+                  )}
+                </div>
+                {(editingLink?.image_url || newLink.image_url) && (
+                  <div className="flex items-center space-x-2 p-2 bg-gray-50 rounded border">
+                    <img
+                      src={editingLink?.image_url || newLink.image_url || "/placeholder.svg"}
+                      alt="Preview"
+                      className="w-12 h-12 object-cover rounded border"
+                    />
+                    <div className="text-sm text-gray-600">
+                      <p>Imagem carregada com sucesso</p>
+                      <p className="text-xs">Esta imagem será usada como ícone do sistema</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setShowLinkDialog(false)}>
                 Cancelar

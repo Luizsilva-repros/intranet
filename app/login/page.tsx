@@ -9,8 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Building2, Mail, Lock, Eye, EyeOff, CheckCircle, AlertCircle, Bug } from "lucide-react"
-import { Textarea } from "@/components/ui/textarea"
+import { Building2, Eye, EyeOff, CheckCircle, AlertCircle } from "lucide-react"
 import { initializeData, getSettings } from "@/lib/local-storage"
 import { authenticateUser } from "@/lib/auth-service"
 
@@ -22,17 +21,7 @@ export default function LoginPage() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [settings, setSettings] = useState<any>(null)
-  const [showDebug, setShowDebug] = useState(false)
   const router = useRouter()
-
-  const [showRequestForm, setShowRequestForm] = useState(false)
-  const [requestForm, setRequestForm] = useState({
-    email: "",
-    name: "",
-    message: "",
-  })
-  const [requestLoading, setRequestLoading] = useState(false)
-  const [requestMessage, setRequestMessage] = useState("")
 
   useEffect(() => {
     console.log("🚀 Inicializando página de login...")
@@ -138,55 +127,17 @@ export default function LoginPage() {
     }
   }
 
-  const handleRequestAccess = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setRequestLoading(true)
-    setRequestMessage("")
-    setError("")
-
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      setRequestMessage("Solicitação enviada! O administrador será notificado por email.")
-      setRequestForm({ email: "", name: "", message: "" })
-      setShowRequestForm(false)
-    } catch (error: any) {
-      setError(error.message)
-    } finally {
-      setRequestLoading(false)
-    }
-  }
-
-  const showDebugInfo = () => {
-    const usersData = localStorage.getItem("intranet_users")
-    if (usersData) {
-      try {
-        const users = JSON.parse(usersData)
-        console.log("🔍 === INFORMAÇÕES DE DEBUG ===")
-        console.log(`Total de usuários: ${users.length}`)
-        users.forEach((user: any, index: number) => {
-          console.log(`${index + 1}. ${user.email} (${user.name}) - Ativo: ${user.active} - Role: ${user.role}`)
-        })
-        alert(`Debug: ${users.length} usuários encontrados. Verifique o console para detalhes.`)
-      } catch (e) {
-        alert("Erro ao ler dados de usuários")
-      }
-    } else {
-      alert("Nenhum dado de usuários encontrado")
-    }
-  }
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
+    <div className="min-h-screen bg-black flex items-center justify-center p-4">
+      <Card className="w-full max-w-md bg-white shadow-2xl">
+        <CardHeader className="text-center pb-8 pt-8">
           {/* Logo da empresa */}
-          <div className="mx-auto mb-4 flex items-center justify-center">
+          <div className="mx-auto mb-6 flex items-center justify-center">
             {settings?.logo_url ? (
               <img
                 src={settings.logo_url || "/placeholder.svg"}
                 alt="Logo da empresa"
-                className="h-16 w-auto max-w-[200px] object-contain"
+                className="h-20 w-auto max-w-[280px] object-contain"
                 onError={(e) => {
                   e.currentTarget.style.display = "none"
                   const fallbackIcon = e.currentTarget.nextElementSibling as HTMLElement
@@ -198,73 +149,76 @@ export default function LoginPage() {
             ) : null}
 
             <div
-              className={`h-12 w-12 items-center justify-center rounded-full bg-blue-100 ${
+              className={`h-16 w-16 items-center justify-center rounded-full bg-blue-100 ${
                 settings?.logo_url ? "hidden" : "flex"
               }`}
               style={{ display: settings?.logo_url ? "none" : "flex" }}
             >
-              <Building2 className="h-6 w-6 text-blue-600" />
+              <Building2 className="h-8 w-8 text-blue-600" />
             </div>
           </div>
 
-          <CardTitle className="text-2xl font-bold">{settings?.company_name || "Intranet Corporativa"}</CardTitle>
-          <CardDescription>Acesse com suas credenciais corporativas</CardDescription>
+          <CardTitle className="text-3xl font-bold text-gray-900 mb-2">INTRANET</CardTitle>
+          <CardDescription className="text-gray-600 text-lg">Acesse sua conta</CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
+        <CardContent className="px-8 pb-8">
+          <form onSubmit={handleLogin} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="email">Email Corporativo</Label>
+              <Label htmlFor="email" className="text-gray-700 font-medium">
+                Login
+              </Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
                   id="email"
                   type="email"
                   placeholder="seu.email@empresa.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10"
+                  className="h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                   required
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
+              <Label htmlFor="password" className="text-gray-700 font-medium">
+                Senha
+              </Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="Sua senha"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10 pr-10"
+                  className="h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500 pr-12"
                   required
                   minLength={3}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-3 h-4 w-4 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
             </div>
 
+            <div className="text-center">
+              <button
+                type="button"
+                className="text-blue-600 hover:text-blue-800 text-sm font-medium underline"
+                onClick={() => alert("Funcionalidade em desenvolvimento")}
+              >
+                Esqueci minha senha
+              </button>
+            </div>
+
             {error && (
-              <Alert variant="destructive">
+              <Alert variant="destructive" className="border-red-200 bg-red-50">
                 <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  {error}
-                  {error.includes("não autorizado") && (
-                    <div className="mt-2 text-xs">
-                      <p>• Verifique se o email está correto</p>
-                      <p>• Confirme se você foi cadastrado pelo administrador</p>
-                      <p>• Tente fazer logout e login novamente</p>
-                    </div>
-                  )}
-                </AlertDescription>
+                <AlertDescription className="text-red-800">{error}</AlertDescription>
               </Alert>
             )}
 
@@ -280,98 +234,21 @@ export default function LoginPage() {
               </Alert>
             )}
 
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button
+              type="submit"
+              className="w-full h-12 bg-black hover:bg-gray-800 text-white font-medium text-lg"
+              disabled={loading}
+            >
               {loading ? (
                 <div className="flex items-center">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Autenticando...
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  Entrando...
                 </div>
               ) : (
                 "Entrar"
               )}
             </Button>
-
-            <div className="mt-4 text-center">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowRequestForm(!showRequestForm)}
-                className="w-full"
-              >
-                Não tem acesso? Solicitar Autorização
-              </Button>
-            </div>
-
-            {/* Botão de Debug */}
-            <div className="mt-2 text-center">
-              <Button type="button" variant="ghost" size="sm" onClick={showDebugInfo} className="text-xs">
-                <Bug className="h-3 w-3 mr-1" />
-                Debug: Ver usuários cadastrados
-              </Button>
-            </div>
-
-            {showRequestForm && (
-              <Card className="mt-4">
-                <CardHeader>
-                  <CardTitle className="text-lg">Solicitar Acesso</CardTitle>
-                  <CardDescription>Preencha o formulário para solicitar acesso à intranet</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleRequestAccess} className="space-y-4">
-                    <div>
-                      <Label htmlFor="request-email">Email Corporativo</Label>
-                      <Input
-                        id="request-email"
-                        type="email"
-                        placeholder="seu.email@empresa.com"
-                        value={requestForm.email}
-                        onChange={(e) => setRequestForm({ ...requestForm, email: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="request-name">Nome Completo</Label>
-                      <Input
-                        id="request-name"
-                        placeholder="Seu nome completo"
-                        value={requestForm.name}
-                        onChange={(e) => setRequestForm({ ...requestForm, name: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="request-message">Justificativa (opcional)</Label>
-                      <Textarea
-                        id="request-message"
-                        placeholder="Por que você precisa de acesso à intranet?"
-                        value={requestForm.message}
-                        onChange={(e) => setRequestForm({ ...requestForm, message: e.target.value })}
-                        rows={3}
-                      />
-                    </div>
-
-                    {requestMessage && (
-                      <Alert>
-                        <CheckCircle className="h-4 w-4" />
-                        <AlertDescription>{requestMessage}</AlertDescription>
-                      </Alert>
-                    )}
-
-                    <Button type="submit" className="w-full" disabled={requestLoading}>
-                      {requestLoading ? "Enviando..." : "Solicitar Acesso"}
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            )}
           </form>
-
-          <div className="mt-6 text-center text-sm text-gray-600">
-            <p>Apenas usuários autorizados podem acessar o sistema.</p>
-            <p className="text-xs text-gray-500 mt-2">
-              Problemas com login? Use o botão "Debug" acima para verificar se seu usuário foi cadastrado.
-            </p>
-          </div>
         </CardContent>
       </Card>
     </div>
