@@ -6,8 +6,8 @@ import "./globals.css"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Intranet Corporativa",
-  description: "Sistema de intranet para gestão corporativa",
+  title: "Intranet REPROS",
+  description: "Portal Corporativo da REPROS",
     generator: 'v0.dev'
 }
 
