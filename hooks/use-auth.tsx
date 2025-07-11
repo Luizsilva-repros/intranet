@@ -4,9 +4,13 @@ import type React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
 
 interface AuthUser {
+  id: string
   email: string
   name: string
   role: "admin" | "user"
+  department?: string
+  title?: string
+  groups?: string[]
 }
 
 interface AuthContextType {
@@ -30,8 +34,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Verificar se há usuário logado no localStorage
-    const savedUser = localStorage.getItem("intranet_user")
-    console.log("🔍 Verificando usuário salvo:", savedUser)
+    const savedUser = localStorage.getItem("intranet_current_user")
+    console.log("🔍 Verificando usuário salvo:", savedUser ? "ENCONTRADO" : "NÃO ENCONTRADO")
 
     if (savedUser) {
       try {
@@ -41,7 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setAuthUser(userData)
       } catch (error) {
         console.error("❌ Erro ao carregar usuário:", error)
-        localStorage.removeItem("intranet_user")
+        localStorage.removeItem("intranet_current_user")
       }
     } else {
       console.log("ℹ️ Nenhum usuário salvo encontrado")
@@ -52,7 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     console.log("🚪 Fazendo logout...")
-    localStorage.removeItem("intranet_user")
+    localStorage.removeItem("intranet_current_user")
     setUser(null)
     setAuthUser(null)
   }
