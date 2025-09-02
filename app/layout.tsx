@@ -6,9 +6,9 @@ import "./globals.css"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Intranet REPROS - Portal Corporativo",
-  description: "Portal corporativo interno da REPROS",
-    generator: 'v0.dev'
+  title: "INTRANET REPROS - Portal Corporativo",
+  description: "Portal corporativo da REPROS para comunicação interna e acesso a sistemas",
+    generator: 'v0.app'
 }
 
 export default function RootLayout({

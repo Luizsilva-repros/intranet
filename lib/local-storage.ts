@@ -88,7 +88,7 @@ export interface Settings {
   accent_color: string
 }
 
-// Dados iniciais
+// Dados iniciais - SENHAS RESETADAS
 const initialUsers: User[] = [
   {
     id: "1",
@@ -119,9 +119,9 @@ const initialUsers: User[] = [
 const initialPosts: Post[] = [
   {
     id: "1",
-    title: "Bem-vindos ao novo portal da REPROS!",
+    title: "🎉 Bem-vindos ao novo portal da REPROS!",
     content:
-      "Estamos felizes em apresentar o novo portal corporativo da REPROS. Aqui você encontrará todas as informações importantes da empresa, comunicados, sistemas e muito mais.",
+      "Estamos felizes em apresentar o novo portal corporativo da REPROS. Aqui você encontrará todas as informações importantes da empresa, comunicados, sistemas e muito mais. Explore as funcionalidades e mantenha-se sempre atualizado!",
     author: "Administrador",
     type: "announcement",
     priority: "high",
@@ -132,12 +132,25 @@ const initialPosts: Post[] = [
   },
   {
     id: "2",
-    title: "Reunião mensal de resultados",
+    title: "📅 Reunião mensal de resultados",
     content:
-      "A reunião mensal de apresentação dos resultados acontecerá na próxima sexta-feira, às 14h, no auditório principal.",
+      "A reunião mensal de apresentação dos resultados acontecerá na próxima sexta-feira, às 14h, no auditório principal. Todos os gestores devem comparecer. Será apresentado o desempenho do mês e as metas para o próximo período.",
     author: "RH",
     type: "event",
     priority: "medium",
+    published: true,
+    published_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "3",
+    title: "🎂 Aniversariantes do mês",
+    content:
+      "Parabéns aos aniversariantes de janeiro! 🎉 Desejamos muito sucesso e felicidades! • Maria Santos - 15/01 • João Silva - 22/01 • Ana Costa - 28/01",
+    author: "RH",
+    type: "birthday",
+    priority: "low",
     published: true,
     published_at: new Date().toISOString(),
     created_at: new Date().toISOString(),
@@ -176,6 +189,36 @@ const initialPortals: Portal[] = [
     access_level: "restricted",
     color: "yellow",
   },
+  {
+    id: "4",
+    name: "CRM Vendas",
+    description: "Gestão de clientes e oportunidades",
+    url: "https://crm.repros.com.br",
+    icon: "TrendingUp",
+    category: "Vendas",
+    access_level: "public",
+    color: "purple",
+  },
+  {
+    id: "5",
+    name: "Suporte Técnico",
+    description: "Central de atendimento ao cliente",
+    url: "https://suporte.repros.com.br",
+    icon: "Headphones",
+    category: "Suporte",
+    access_level: "public",
+    color: "cyan",
+  },
+  {
+    id: "6",
+    name: "Business Intelligence",
+    description: "Relatórios e análises de dados",
+    url: "https://bi.repros.com.br",
+    icon: "BarChart3",
+    category: "Análise",
+    access_level: "admin",
+    color: "indigo",
+  },
 ]
 
 const initialExtensions: Extension[] = [
@@ -203,6 +246,22 @@ const initialExtensions: Extension[] = [
     position: "Contador",
     email: "pedro@repros.com.br",
   },
+  {
+    id: "4",
+    name: "Ana Costa",
+    extension: "1004",
+    department: "Marketing",
+    position: "Coordenadora",
+    email: "ana@repros.com.br",
+  },
+  {
+    id: "5",
+    name: "Carlos Oliveira",
+    extension: "1005",
+    department: "TI",
+    position: "Analista",
+    email: "carlos@repros.com.br",
+  },
 ]
 
 const initialSettings: Settings = {
@@ -212,46 +271,80 @@ const initialSettings: Settings = {
   accent_color: "#7c3aed",
 }
 
+// Função para resetar dados (limpar localStorage e recriar)
+export function resetData() {
+  if (typeof window === "undefined") return
+
+  console.log("🔄 Resetando dados da intranet...")
+
+  // Limpar todos os dados existentes
+  localStorage.removeItem("intranet_users")
+  localStorage.removeItem("intranet_posts")
+  localStorage.removeItem("intranet_portals")
+  localStorage.removeItem("intranet_extensions")
+  localStorage.removeItem("intranet_settings")
+  localStorage.removeItem("intranet_user")
+
+  // Recriar com dados iniciais
+  localStorage.setItem("intranet_users", JSON.stringify(initialUsers))
+  localStorage.setItem("intranet_posts", JSON.stringify(initialPosts))
+  localStorage.setItem("intranet_portals", JSON.stringify(initialPortals))
+  localStorage.setItem("intranet_extensions", JSON.stringify(initialExtensions))
+  localStorage.setItem("intranet_settings", JSON.stringify(initialSettings))
+
+  console.log("✅ Dados resetados com sucesso!")
+  console.log("🔑 Credenciais:")
+  console.log("   Admin: admin@repros.com.br / admin")
+  console.log("   User: joao@repros.com.br / 123456")
+}
+
 // Funções de inicialização
 export function initializeData() {
   if (typeof window === "undefined") return
 
-  if (!localStorage.getItem("intranet_users")) {
-    localStorage.setItem("intranet_users", JSON.stringify(initialUsers))
-  }
-  if (!localStorage.getItem("intranet_posts")) {
-    localStorage.setItem("intranet_posts", JSON.stringify(initialPosts))
-  }
-  if (!localStorage.getItem("intranet_portals")) {
-    localStorage.setItem("intranet_portals", JSON.stringify(initialPortals))
-  }
-  if (!localStorage.getItem("intranet_extensions")) {
-    localStorage.setItem("intranet_extensions", JSON.stringify(initialExtensions))
-  }
-  if (!localStorage.getItem("intranet_settings")) {
-    localStorage.setItem("intranet_settings", JSON.stringify(initialSettings))
-  }
+  console.log("🔧 Inicializando dados da intranet...")
+
+  // Sempre resetar os dados para garantir senhas corretas
+  resetData()
 }
 
-// Funções de autenticação
+// Funções de autenticação - SISTEMA SIMPLIFICADO
 export function login(email: string, password: string): User | null {
   if (typeof window === "undefined") return null
 
+  console.log(`🔐 Tentativa de login: ${email}`)
+
   const users = getUsers()
-  const user = users.find((u) => u.email === email && u.password === password && u.active)
+  console.log(
+    `📋 Usuários disponíveis:`,
+    users.map((u) => ({ email: u.email, password: u.password })),
+  )
+
+  const user = users.find((u) => {
+    const emailMatch = u.email.toLowerCase() === email.toLowerCase()
+    const passwordMatch = u.password === password
+    const isActive = u.active
+
+    console.log(`🔍 Verificando ${u.email}:`, { emailMatch, passwordMatch, isActive })
+
+    return emailMatch && passwordMatch && isActive
+  })
 
   if (user) {
+    console.log(`✅ Login bem-sucedido para ${email}`)
     const updatedUser = { ...user, last_login: new Date().toISOString() }
     updateUser(user.id, updatedUser)
     localStorage.setItem("intranet_user", JSON.stringify(updatedUser))
     return updatedUser
   }
 
+  console.log(`❌ Login falhou para ${email}`)
   return null
 }
 
 export function logout() {
   if (typeof window === "undefined") return
+  console.log("🚪 Fazendo logout...")
   localStorage.removeItem("intranet_user")
 }
 
@@ -263,9 +356,9 @@ export function getCurrentUser(): User | null {
 
 // Funções CRUD para Users
 export function getUsers(): User[] {
-  if (typeof window === "undefined") return []
+  if (typeof window === "undefined") return initialUsers
   const users = localStorage.getItem("intranet_users")
-  return users ? JSON.parse(users) : []
+  return users ? JSON.parse(users) : initialUsers
 }
 
 export function addUser(userData: Omit<User, "id" | "created_at">): User {
@@ -296,9 +389,9 @@ export function deleteUser(id: string): void {
 
 // Funções CRUD para Posts
 export function getPosts(): Post[] {
-  if (typeof window === "undefined") return []
+  if (typeof window === "undefined") return initialPosts
   const posts = localStorage.getItem("intranet_posts")
-  return posts ? JSON.parse(posts) : []
+  return posts ? JSON.parse(posts) : initialPosts
 }
 
 export function savePosts(posts: Post[]): void {
@@ -312,9 +405,9 @@ export function deletePost(id: string): void {
 
 // Funções CRUD para Portals
 export function getPortals(): Portal[] {
-  if (typeof window === "undefined") return []
+  if (typeof window === "undefined") return initialPortals
   const portals = localStorage.getItem("intranet_portals")
-  return portals ? JSON.parse(portals) : []
+  return portals ? JSON.parse(portals) : initialPortals
 }
 
 export function togglePortalFavorite(id: string): void {
@@ -328,9 +421,9 @@ export function togglePortalFavorite(id: string): void {
 
 // Funções CRUD para Extensions
 export function getExtensions(): Extension[] {
-  if (typeof window === "undefined") return []
+  if (typeof window === "undefined") return initialExtensions
   const extensions = localStorage.getItem("intranet_extensions")
-  return extensions ? JSON.parse(extensions) : []
+  return extensions ? JSON.parse(extensions) : initialExtensions
 }
 
 export function addExtension(extensionData: Omit<Extension, "id">): Extension {
@@ -496,7 +589,6 @@ export function getPostTypeIcon(type: string): string {
   return icons[type as keyof typeof icons] || "FileText"
 }
 
-/** Retorna um nome amigável (pt-BR) para o tipo de post */
 export function getPostTypeName(type: string): string {
   const names: Record<string, string> = {
     general: "Geral",

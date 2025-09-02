@@ -2,49 +2,44 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { getCurrentUser, getSettings, updateSettings, updateUser, type User, type Settings } from "@/lib/local-storage"
-import { ArrowLeft, UserIcon, SettingsIcon, Palette, Save, CheckCircle, Eye, EyeOff } from "lucide-react"
+import { ArrowLeft, Save, CheckCircle } from "lucide-react"
+import { getCurrentUser, updateUser, getSettings, updateSettings } from "@/lib/local-storage"
 
 export default function SettingsPage() {
-  const [user, setUser] = useState<User | null>(null)
-  const [settings, setSettingsState] = useState<Settings | null>(null)
+  const [user, setUser] = useState(null)
+  const [settings, setSettingsState] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [message, setMessage] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
+  const [success, setSuccess] = useState("")
+  const [error, setError] = useState("")
+
+  // User form state
+  const [userName, setUserName] = useState("")
+  const [userEmail, setUserEmail] = useState("")
+  const [userDepartment, setUserDepartment] = useState("")
+  const [userTitle, setUserTitle] = useState("")
+  const [currentPassword, setCurrentPassword] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+
+  // Notification settings
+  const [emailNotifications, setEmailNotifications] = useState(true)
+  const [pushNotifications, setPushNotifications] = useState(true)
+  const [weeklyDigest, setWeeklyDigest] = useState(false)
+
+  // System settings (admin only)
+  const [companyName, setCompanyName] = useState("")
+  const [primaryColor, setPrimaryColor] = useState("")
+  const [secondaryColor, setSecondaryColor] = useState("")
+
   const router = useRouter()
-
-  // Estados para formulários
-  const [userForm, setUserForm] = useState({
-    name: "",
-    email: "",
-    department: "",
-    title: "",
-    password: "",
-    confirmPassword: "",
-  })
-
-  const [settingsForm, setSettingsForm] = useState({
-    company_name: "",
-    primary_color: "",
-    secondary_color: "",
-    accent_color: "",
-    logo_url: "",
-  })
-
-  const [notifications, setNotifications] = useState({
-    email_notifications: true,
-    push_notifications: true,
-    weekly_digest: false,
-  })
 
   useEffect(() => {
     const currentUser = getCurrentUser()
@@ -54,83 +49,91 @@ export default function SettingsPage() {
     }
 
     setUser(currentUser)
-    setUserForm({
-      name: currentUser.name,
-      email: currentUser.email,
-      department: currentUser.department || "",
-      title: currentUser.title || "",
-      password: "",
-      confirmPassword: "",
-    })
+    setUserName(currentUser.name)
+    setUserEmail(currentUser.email)
+    setUserDepartment(currentUser.department || "")
+    setUserTitle(currentUser.title || "")
 
     const currentSettings = getSettings()
     setSettingsState(currentSettings)
-    setSettingsForm({
-      company_name: currentSettings.company_name,
-      primary_color: currentSettings.primary_color,
-      secondary_color: currentSettings.secondary_color,
-      accent_color: currentSettings.accent_color,
-      logo_url: currentSettings.logo_url || "",
-    })
+    setCompanyName(currentSettings.company_name)
+    setPrimaryColor(currentSettings.primary_color)
+    setSecondaryColor(currentSettings.secondary_color)
 
     setLoading(false)
   }, [router])
 
-  const showMessage = (msg: string) => {
-    setMessage(msg)
-    setTimeout(() => setMessage(""), 3000)
-  }
-
-  const handleUserUpdate = async () => {
+  const handleSaveProfile = async () => {
     if (!user) return
 
     setSaving(true)
+    setError("")
+    setSuccess("")
+
     try {
-      // Validar senhas se fornecidas
-      if (userForm.password && userForm.password !== userForm.confirmPassword) {
-        showMessage("As senhas não coincidem")
-        setSaving(false)
-        return
+      // Validate password change if provided
+      if (newPassword) {
+        if (currentPassword !== user.password) {
+          setError("Senha atual incorreta")
+          setSaving(false)
+          return
+        }
+        if (newPassword !== confirmPassword) {
+          setError("Nova senha e confirmação não coincidem")
+          setSaving(false)
+          return
+        }
+        if (newPassword.length < 6) {
+          setError("Nova senha deve ter pelo menos 6 caracteres")
+          setSaving(false)
+          return
+        }
       }
 
-      const updateData: Partial<User> = {
-        name: userForm.name,
-        email: userForm.email,
-        department: userForm.department,
-        title: userForm.title,
+      const updatedData = {
+        name: userName,
+        email: userEmail,
+        department: userDepartment,
+        title: userTitle,
       }
 
-      if (userForm.password) {
-        updateData.password = userForm.password
+      if (newPassword) {
+        updatedData.password = newPassword
       }
 
-      updateUser(user.id, updateData)
+      updateUser(user.id, updatedData)
+      setSuccess("Perfil atualizado com sucesso!")
 
-      // Atualizar usuário logado
-      const updatedUser = { ...user, ...updateData }
-      setUser(updatedUser)
-      localStorage.setItem("intranet_user", JSON.stringify(updatedUser))
+      // Clear password fields
+      setCurrentPassword("")
+      setNewPassword("")
+      setConfirmPassword("")
 
-      showMessage("Perfil atualizado com sucesso!")
-    } catch (error) {
-      showMessage("Erro ao atualizar perfil")
+      // Update local user state
+      setUser({ ...user, ...updatedData })
+    } catch (err) {
+      setError("Erro ao salvar perfil")
     } finally {
       setSaving(false)
     }
   }
 
-  const handleSettingsUpdate = async () => {
-    if (user?.role !== "admin") {
-      showMessage("Apenas administradores podem alterar configurações do sistema")
-      return
-    }
+  const handleSaveSystemSettings = async () => {
+    if (!user || user.role !== "admin") return
 
     setSaving(true)
+    setError("")
+    setSuccess("")
+
     try {
-      updateSettings(settingsForm)
-      showMessage("Configurações atualizadas com sucesso!")
-    } catch (error) {
-      showMessage("Erro ao atualizar configurações")
+      updateSettings({
+        company_name: companyName,
+        primary_color: primaryColor,
+        secondary_color: secondaryColor,
+      })
+      setSuccess("Configurações do sistema atualizadas com sucesso!")
+    } catch (err) {
+      setError("Erro ao salvar configurações do sistema")
     } finally {
       setSaving(false)
     }
@@ -138,82 +141,60 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-red-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-gray-600">Carregando configurações...</p>
         </div>
       </div>
     )
   }
 
-  if (!user) {
-    return null
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-red-50">
-      {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <Button variant="ghost" size="sm" onClick={() => router.push("/dashboard")}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Voltar
-              </Button>
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-red-500 rounded-lg flex items-center justify-center">
-                <SettingsIcon className="h-4 w-4 text-white" />
-              </div>
-              <h1 className="text-xl font-bold text-gray-900">Configurações</h1>
-            </div>
-            <div className="flex items-center space-x-3">
-              <Avatar>
-                <AvatarFallback className="bg-gradient-to-br from-blue-600 to-red-500 text-white">
-                  {user.name.charAt(0)}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="text-sm font-medium text-gray-900">{user.name}</p>
-                <Badge variant={user.role === "admin" ? "destructive" : "secondary"}>
-                  {user.role === "admin" ? "Admin" : "Usuário"}
-                </Badge>
-              </div>
-            </div>
-          </div>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <Button variant="ghost" onClick={() => router.push("/dashboard")} className="mb-4">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Voltar ao Dashboard
+          </Button>
+          <h1 className="text-3xl font-bold text-gray-900">Configurações</h1>
+          <p className="text-gray-600 mt-2">Gerencie suas preferências e configurações da conta</p>
         </div>
-      </header>
 
-      {/* Message Alert */}
-      {message && (
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
-          <Alert className="border-green-200 bg-green-50">
+        {/* Success/Error Messages */}
+        {success && (
+          <Alert className="mb-6 border-green-200 bg-green-50">
             <CheckCircle className="h-4 w-4 text-green-600" />
-            <AlertDescription className="text-green-800">{message}</AlertDescription>
+            <AlertDescription className="text-green-800">{success}</AlertDescription>
           </Alert>
-        </div>
-      )}
+        )}
 
-      {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="space-y-8">
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        <div className="space-y-6">
           {/* Profile Settings */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <UserIcon className="h-5 w-5" />
                 <span>Perfil do Usuário</span>
               </CardTitle>
-              <CardDescription>Gerencie suas informações pessoais e credenciais</CardDescription>
+              <CardDescription>Atualize suas informações pessoais e senha</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Nome Completo</Label>
                   <Input
                     id="name"
-                    value={userForm.name}
-                    onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                    placeholder="Seu nome completo"
                   />
                 </div>
                 <div className="space-y-2">
@@ -221,67 +202,71 @@ export default function SettingsPage() {
                   <Input
                     id="email"
                     type="email"
-                    value={userForm.email}
-                    onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                    value={userEmail}
+                    onChange={(e) => setUserEmail(e.target.value)}
+                    placeholder="seu.email@repros.com.br"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="department">Departamento</Label>
                   <Input
                     id="department"
-                    value={userForm.department}
-                    onChange={(e) => setUserForm({ ...userForm, department: e.target.value })}
+                    value={userDepartment}
+                    onChange={(e) => setUserDepartment(e.target.value)}
+                    placeholder="Seu departamento"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="title">Cargo</Label>
                   <Input
                     id="title"
-                    value={userForm.title}
-                    onChange={(e) => setUserForm({ ...userForm, title: e.target.value })}
+                    value={userTitle}
+                    onChange={(e) => setUserTitle(e.target.value)}
+                    placeholder="Seu cargo"
                   />
                 </div>
               </div>
 
-              <div className="border-t pt-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Alterar Senha</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Separator />
+
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Alterar Senha</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="password">Nova Senha</Label>
-                    <div className="relative">
-                      <Input
-                        id="password"
-                        type={showPassword ? "text" : "password"}
-                        value={userForm.password}
-                        onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
-                        placeholder="Deixe em branco para manter a atual"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-3"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </Button>
-                    </div>
+                    <Label htmlFor="currentPassword">Senha Atual</Label>
+                    <Input
+                      id="currentPassword"
+                      type="password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder="Senha atual"
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirmar Nova Senha</Label>
+                    <Label htmlFor="newPassword">Nova Senha</Label>
+                    <Input
+                      id="newPassword"
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Nova senha"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirmar Senha</Label>
                     <Input
                       id="confirmPassword"
-                      type={showPassword ? "text" : "password"}
-                      value={userForm.confirmPassword}
-                      onChange={(e) => setUserForm({ ...userForm, confirmPassword: e.target.value })}
-                      placeholder="Confirme a nova senha"
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Confirmar nova senha"
                     />
                   </div>
                 </div>
               </div>
 
               <div className="flex justify-end">
-                <Button onClick={handleUserUpdate} disabled={saving}>
+                <Button onClick={handleSaveProfile} disabled={saving}>
                   <Save className="h-4 w-4 mr-2" />
                   {saving ? "Salvando..." : "Salvar Perfil"}
                 </Button>
@@ -292,132 +277,95 @@ export default function SettingsPage() {
           {/* Notification Settings */}
           <Card>
             <CardHeader>
-              <CardTitle>Notificações</CardTitle>
-              <CardDescription>Configure como você deseja receber notificações</CardDescription>
+              <CardTitle className="flex items-center space-x-2">
+                <span>Notificações</span>
+              </CardTitle>
+              <CardDescription>Configure suas preferências de notificação</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="email-notifications">Notificações por Email</Label>
-                  <p className="text-sm text-gray-500">Receba comunicados importantes por email</p>
+                <div className="space-y-0.5">
+                  <Label>Notificações por Email</Label>
+                  <p className="text-sm text-gray-500">Receber comunicados importantes por email</p>
                 </div>
-                <Switch
-                  id="email-notifications"
-                  checked={notifications.email_notifications}
-                  onCheckedChange={(checked) => setNotifications({ ...notifications, email_notifications: checked })}
-                />
+                <Switch checked={emailNotifications} onCheckedChange={setEmailNotifications} />
               </div>
               <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="push-notifications">Notificações Push</Label>
-                  <p className="text-sm text-gray-500">Receba notificações no navegador</p>
+                <div className="space-y-0.5">
+                  <Label>Notificações Push</Label>
+                  <p className="text-sm text-gray-500">Receber notificações no navegador</p>
                 </div>
-                <Switch
-                  id="push-notifications"
-                  checked={notifications.push_notifications}
-                  onCheckedChange={(checked) => setNotifications({ ...notifications, push_notifications: checked })}
-                />
+                <Switch checked={pushNotifications} onCheckedChange={setPushNotifications} />
               </div>
               <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="weekly-digest">Resumo Semanal</Label>
-                  <p className="text-sm text-gray-500">Receba um resumo das atividades da semana</p>
+                <div className="space-y-0.5">
+                  <Label>Resumo Semanal</Label>
+                  <p className="text-sm text-gray-500">Receber resumo semanal das atividades</p>
                 </div>
-                <Switch
-                  id="weekly-digest"
-                  checked={notifications.weekly_digest}
-                  onCheckedChange={(checked) => setNotifications({ ...notifications, weekly_digest: checked })}
-                />
+                <Switch checked={weeklyDigest} onCheckedChange={setWeeklyDigest} />
               </div>
             </CardContent>
           </Card>
 
-          {/* System Settings - Only for Admins */}
-          {user.role === "admin" && (
+          {/* System Settings (Admin Only) */}
+          {user?.role === "admin" && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
-                  <Palette className="h-5 w-5" />
                   <span>Configurações do Sistema</span>
                 </CardTitle>
-                <CardDescription>Configure a aparência e informações da empresa</CardDescription>
+                <CardDescription>Personalize a aparência e configurações gerais</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="company-name">Nome da Empresa</Label>
+                  <Label htmlFor="companyName">Nome da Empresa</Label>
                   <Input
-                    id="company-name"
-                    value={settingsForm.company_name}
-                    onChange={(e) => setSettingsForm({ ...settingsForm, company_name: e.target.value })}
+                    id="companyName"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    placeholder="Nome da empresa"
                   />
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="logo-url">URL do Logo</Label>
-                  <Input
-                    id="logo-url"
-                    value={settingsForm.logo_url}
-                    onChange={(e) => setSettingsForm({ ...settingsForm, logo_url: e.target.value })}
-                    placeholder="https://exemplo.com/logo.png"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="primary-color">Cor Primária</Label>
+                    <Label htmlFor="primaryColor">Cor Primária</Label>
                     <div className="flex space-x-2">
                       <Input
-                        id="primary-color"
+                        id="primaryColor"
                         type="color"
-                        value={settingsForm.primary_color}
-                        onChange={(e) => setSettingsForm({ ...settingsForm, primary_color: e.target.value })}
+                        value={primaryColor}
+                        onChange={(e) => setPrimaryColor(e.target.value)}
                         className="w-16 h-10 p-1"
                       />
                       <Input
-                        value={settingsForm.primary_color}
-                        onChange={(e) => setSettingsForm({ ...settingsForm, primary_color: e.target.value })}
+                        value={primaryColor}
+                        onChange={(e) => setPrimaryColor(e.target.value)}
+                        placeholder="#2563eb"
                         className="flex-1"
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="secondary-color">Cor Secundária</Label>
+                    <Label htmlFor="secondaryColor">Cor Secundária</Label>
                     <div className="flex space-x-2">
                       <Input
-                        id="secondary-color"
+                        id="secondaryColor"
                         type="color"
-                        value={settingsForm.secondary_color}
-                        onChange={(e) => setSettingsForm({ ...settingsForm, secondary_color: e.target.value })}
+                        value={secondaryColor}
+                        onChange={(e) => setSecondaryColor(e.target.value)}
                         className="w-16 h-10 p-1"
                       />
                       <Input
-                        value={settingsForm.secondary_color}
-                        onChange={(e) => setSettingsForm({ ...settingsForm, secondary_color: e.target.value })}
-                        className="flex-1"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="accent-color">Cor de Destaque</Label>
-                    <div className="flex space-x-2">
-                      <Input
-                        id="accent-color"
-                        type="color"
-                        value={settingsForm.accent_color}
-                        onChange={(e) => setSettingsForm({ ...settingsForm, accent_color: e.target.value })}
-                        className="w-16 h-10 p-1"
-                      />
-                      <Input
-                        value={settingsForm.accent_color}
-                        onChange={(e) => setSettingsForm({ ...settingsForm, accent_color: e.target.value })}
+                        value={secondaryColor}
+                        onChange={(e) => setSecondaryColor(e.target.value)}
+                        placeholder="#dc2626"
                         className="flex-1"
                       />
                     </div>
                   </div>
                 </div>
-
                 <div className="flex justify-end">
-                  <Button onClick={handleSettingsUpdate} disabled={saving}>
+                  <Button onClick={handleSaveSystemSettings} disabled={saving}>
                     <Save className="h-4 w-4 mr-2" />
                     {saving ? "Salvando..." : "Salvar Configurações"}
                   </Button>
@@ -426,7 +374,7 @@ export default function SettingsPage() {
             </Card>
           )}
         </div>
-      </main>
+      </div>
     </div>
   )
 }

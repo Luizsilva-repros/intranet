@@ -9,17 +9,19 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Building2, Mail, Lock, AlertCircle } from "lucide-react"
+import { Building2, Mail, Lock, AlertCircle, Eye, EyeOff } from "lucide-react"
 import { login, initializeData } from "@/lib/local-storage"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
+    console.log("🔧 Inicializando página de login...")
     initializeData()
   }, [])
 
@@ -28,14 +30,19 @@ export default function LoginPage() {
     setError("")
     setLoading(true)
 
+    console.log(`🔐 Tentativa de login com: ${email}`)
+
     try {
       const user = login(email, password)
       if (user) {
+        console.log(`✅ Login bem-sucedido, redirecionando para dashboard...`)
         router.push("/dashboard")
       } else {
+        console.log(`❌ Login falhou`)
         setError("Email ou senha incorretos")
       }
     } catch (err) {
+      console.error("❌ Erro no login:", err)
       setError("Erro ao fazer login. Tente novamente.")
     } finally {
       setLoading(false)
@@ -44,9 +51,9 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-red-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center space-y-4">
-          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-600 to-red-500 rounded-2xl flex items-center justify-center">
+          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-600 to-red-500 rounded-2xl flex items-center justify-center shadow-lg">
             <Building2 className="h-8 w-8 text-white" />
           </div>
           <div>
@@ -74,7 +81,7 @@ export default function LoginPage() {
                   placeholder="seu.email@repros.com.br"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 h-11"
                   required
                 />
               </div>
@@ -86,13 +93,20 @@ export default function LoginPage() {
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   id="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="Digite sua senha"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 pr-10 h-11"
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
             </div>
 
@@ -105,10 +119,17 @@ export default function LoginPage() {
 
             <Button
               type="submit"
-              className="w-full bg-gradient-to-r from-blue-600 to-red-500 hover:from-blue-700 hover:to-red-600"
+              className="w-full h-11 bg-gradient-to-r from-blue-600 to-red-500 hover:from-blue-700 hover:to-red-600 text-white font-semibold shadow-lg"
               disabled={loading}
             >
-              {loading ? "Entrando..." : "Entrar"}
+              {loading ? (
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Entrando...</span>
+                </div>
+              ) : (
+                "Entrar"
+              )}
             </Button>
           </form>
 

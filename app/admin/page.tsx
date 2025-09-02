@@ -42,6 +42,7 @@ import {
   initializeData,
   savePosts,
   formatTimeAgo,
+  getCurrentUser,
 } from "@/lib/local-storage"
 import type { User, Group, Category, Link as LinkType, Post, Extension, Settings } from "@/lib/local-storage"
 import {
@@ -171,30 +172,29 @@ export default function AdminPage() {
   const [editImagePreview, setEditImagePreview] = useState("")
 
   useEffect(() => {
+    console.log("🔧 Inicializando página admin...")
     initializeData()
 
-    const savedUser = localStorage.getItem("intranet_user")
-    if (!savedUser) {
+    // Usar getCurrentUser em vez de localStorage diretamente
+    const currentUser = getCurrentUser()
+    console.log("👤 Usuário atual:", currentUser)
+
+    if (!currentUser) {
+      console.log("❌ Nenhum usuário logado, redirecionando...")
       router.push("/login")
       return
     }
 
-    try {
-      const userData = JSON.parse(savedUser)
-      if (userData.role !== "admin") {
-        router.push("/dashboard")
-        return
-      }
-      setUser(userData)
-      loadData()
-    } catch (error) {
-      console.error("Erro ao carregar usuário:", error)
-      localStorage.removeItem("intranet_user")
-      router.push("/login")
+    if (currentUser.role !== "admin") {
+      console.log("❌ Usuário não é admin, redirecionando...")
+      router.push("/dashboard")
       return
-    } finally {
-      setLoading(false)
     }
+
+    console.log("✅ Usuário admin autenticado:", currentUser.name)
+    setUser(currentUser)
+    loadData()
+    setLoading(false)
   }, [router])
 
   const loadData = () => {

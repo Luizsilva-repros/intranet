@@ -37,6 +37,7 @@ import {
   getPostTypeIcon,
   getPostTypeName,
   getPriorityColor,
+  getCurrentUser,
   type User as UserType,
   type Post,
 } from "@/lib/local-storage"
@@ -79,29 +80,27 @@ export default function AdminPostsPage() {
   const [editPostDialogOpen, setEditPostDialogOpen] = useState(false)
 
   useEffect(() => {
-    // Inicializar dados
+    console.log("🔧 Inicializando página admin posts...")
     initializeData()
 
-    // Verificar se há usuário logado e se é admin
-    const savedUser = localStorage.getItem("intranet_user")
-    if (!savedUser) {
+    // Usar getCurrentUser em vez de localStorage diretamente
+    const currentUser = getCurrentUser()
+    console.log("👤 Usuário atual:", currentUser)
+
+    if (!currentUser) {
+      console.log("❌ Nenhum usuário logado, redirecionando...")
       router.push("/login")
       return
     }
 
-    try {
-      const userData = JSON.parse(savedUser)
-      if (userData.role !== "admin") {
-        router.push("/dashboard")
-        return
-      }
-      setUser(userData)
-    } catch (error) {
-      console.error("Erro ao carregar usuário:", error)
-      localStorage.removeItem("intranet_user")
-      router.push("/login")
+    if (currentUser.role !== "admin") {
+      console.log("❌ Usuário não é admin, redirecionando...")
+      router.push("/dashboard")
       return
     }
+
+    console.log("✅ Usuário admin autenticado:", currentUser.name)
+    setUser(currentUser)
 
     // Carregar posts
     setPosts(getPosts())
